@@ -1,0 +1,27 @@
+{symbol_config : {
+    'BTCUSDT': {
+        'strategy_number': 'boll1',
+    },
+    'BNBUSDT': {
+        'strategy_number': 'boll1',
+                 },
+    'ETHUSDT': {
+        'strategy_number': 'boll2',
+    },
+    'ETCUSDT': {
+        'strategy_number': 'boll2',
+                 },
+},
+strategy_config : {
+    'boll1': {'leverage': 4,
+              'strategy_name': 'real_signal_simple_bolling_we',
+              'para': [120, 1.7],
+              'position': 0.5,
+              },
+    'boll2': {'leverage': 4,
+              'strategy_name': 'real_signal_simple_bolling_we',
+              'para': [90, 1.9],
+              'position': 0.5,
+              }
+}
+}
