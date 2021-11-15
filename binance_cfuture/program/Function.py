@@ -611,3 +611,6 @@ def cal_all_order_info(symbol_signal, symbol_info, symbol_config, exchange, mode
 
     return symbol_order_params
 
+# 建立初始状态
+def trading_initialization(symbol_config):
+    return
