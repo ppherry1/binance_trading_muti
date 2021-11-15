@@ -20,6 +20,10 @@ mode = 'u模式'  # u模式，币模式
 # =k线周期
 time_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所支持的K线才行。最好不要低于5m
 
+# 设置初始资金来源
+funding_coin = 'USDT'  # 用于建立初始资金的币种
+funding_from_spot = True  # 是否从现货中提取交易币种作为保证金，这里选True，则优先从现货划转，不足的话再买。选False则是直接买。
+
 # =交易所配置
 BINANCE_CONFIG = {
     'apiKey': 'A3sgiz5hLZ2vGn3uYMm43pFzrrkSCsXR2cPTmZ801MG20Bz91Bve8UuxI6iPLPLj',
@@ -40,12 +44,16 @@ symbol_config = {
                      'strategy_name': 'real_signal_simple_bolling_we',  # 使用的策略的名称
                      'para': [100, 1.6],  # 参数
                      'face_value': 10,  # 合约面值（张）
+                     'initial_funds': True,  # 这里填True，则运行时按照下面所设置的initial_usd进行到等值套保状态，如有多余的币会转到现货账户，币不足的话则会购买
+                     # 注意！如果initial_funds写True有可能会强行平掉已开的套保以外的多余仓位，相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
+                     'initial_usd': 20,  # u模式初始投入的资金美元价值initial_usd
                      '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                      },
     'BNBUSD_PERP': {'leverage': 1.5,
                     'strategy_name': 'real_signal_simple_bolling_we',
                     'para': [100, 1.7],
                     'face_value': 10,
+                    'initial_usd_funds': 20,
                     '币模式保证金': 10,
                     },
 }
@@ -66,7 +74,7 @@ def main():
     max_candle_num = 5  # 每次获取的K线数量
     symbol_candle_data = get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval,
                                                                      max_candle_num, if_print=True)
-
+    trading_initialization(symbol_config)
     # =进入每次的循环
     while True:
         # ==========获取持仓数据==========
