@@ -612,5 +612,20 @@ def cal_all_order_info(symbol_signal, symbol_info, symbol_config, exchange, mode
     return symbol_order_params
 
 # 建立初始状态
-def trading_initialization(symbol_config):
+def trading_initialization(funding_cofig, symbol_config):
+    for symbol in symbol_config.keys():
+        symbol_spot = symbol[:symbol.find('USD')] + '/' + funding_cofig['funding_coin'].upper()
+        symbol_config[symbol]
+
+        # if funding_from_spot:
+
     return
+
+
+# 'BNBUSD_PERP': {'leverage': 1.5,
+#                     'strategy_name': 'real_signal_simple_bolling_we',
+#                     'para': [100, 1.7],
+#                     'face_value': 10,
+#                     'initial_usd_funds': 20,
+#                     '币模式保证金': 10,
+#                     },

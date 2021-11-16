@@ -20,9 +20,14 @@ mode = 'u模式'  # u模式，币模式
 # =k线周期
 time_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所支持的K线才行。最好不要低于5m
 
-# 设置初始资金来源
-funding_coin = 'USDT'  # 用于建立初始资金的币种
-funding_from_spot = True  # 是否从现货中提取交易币种作为保证金，这里选True，则优先从现货划转，不足的话再买。选False则是直接买。
+# 设置初始资金来源相关参数
+funding_cofig = {
+    'funding_from_spot': True,  # 是否从现货中提取交易币种作为保证金，这里选True，则优先从现货划转，不足的话再买。选False则是直接买。
+    'funding_coin': 'USDT',  # 用于建立初始资金的币种
+    'r_threshold': 0.01,  # 建仓的最小期现差阈值,可设定为-1，则为忽略阈值，直接建仓
+    'execute_amount': 10,  # 每次建仓的美元价值，BTC最小为100，其他币最小为10。
+}
+
 
 # =交易所配置
 BINANCE_CONFIG = {
@@ -74,7 +79,7 @@ def main():
     max_candle_num = 5  # 每次获取的K线数量
     symbol_candle_data = get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval,
                                                                      max_candle_num, if_print=True)
-    trading_initialization(symbol_config)
+    trading_initialization(funding_cofig, symbol_config)
     # =进入每次的循环
     while True:
         # ==========获取持仓数据==========
