@@ -5,9 +5,9 @@ import pandas as pd
 from capital_allocate.wraps_func import *
 from functools import wraps, partial
 from capital_allocate.capital_config import *
-import okex_autoinvest_trading.Config as autoinvest
-import okex_cta_trading.Config as cta
-import okex_infnet_trading.Config as infnet
+import binance_cfuture.Config as cfuture
+import binance_hedge.Config as chedge
+import binance.Config as infnet
 from capital_allocate import capital_strategy
 
 

@@ -3,14 +3,12 @@
 微信：xbx2626
 币安币本位择时策略框架
 """
-import ccxt
 import math
-import time
 import pandas as pd
 from datetime import datetime, timedelta
 import time
-from binance_cfuture.program.Config import *
-from binance_cfuture.program import Signals
+from binance_cfuture import Signals
+from binance_cfuture.Config import *
 
 pd.set_option('display.max_rows', 1000)
 pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
