@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import time
 from binance_cfuture.program.Config import *
 from binance_cfuture.program import Signals
+
 pd.set_option('display.max_rows', 1000)
 pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
 pd.set_option('display.unicode.ambiguous_as_wide', True)  # 设置命令行输出时的列对齐功能
@@ -121,7 +122,6 @@ def retry_wrapper(func, params={}, act_name='', sleep_seconds=3, retry_times=5):
 
 # ===将最新数据和历史数据合并
 def symbol_candle_data_append_recent_candle_data(symbol_candle_data, recent_candle_data, symbol_config, max_candle_num):
-
     for symbol in symbol_config.keys():
         df = symbol_candle_data[symbol].append(recent_candle_data[symbol], ignore_index=True)
         df.drop_duplicates(subset=['candle_begin_time_GMT8'], keep='last', inplace=True)
@@ -135,8 +135,6 @@ def symbol_candle_data_append_recent_candle_data(symbol_candle_data, recent_cand
 
 # ===处理adl
 def deal_with_binance_adl(exchange, symbol_info, symbol_config):
-
-
     # 获取持仓的adl数据
     adl = retry_wrapper(exchange.dapiPrivateGetAdlQuantile, params={'timestamp': int(time.time() * 1000)},
                         act_name='查看合约ADL状态')
@@ -227,7 +225,7 @@ def coin_future_exchange_info(exchange, symbol_config):
 
     # 转化为DataFrame
     df = pd.DataFrame(exchange_info['symbols'])
-    df['tickSize'] = df['filters'].apply(lambda x: math.log(1/float(x[0]['tickSize']), 10))
+    df['tickSize'] = df['filters'].apply(lambda x: math.log(1 / float(x[0]['tickSize']), 10))
     df = df[['symbol', 'pricePrecision', 'tickSize']]
     df.set_index('symbol', inplace=True)
 
@@ -260,7 +258,8 @@ def ccxt_fetch_binance_coin_future_candle_data(exchange, symbol, time_interval, 
 
 
 # ===串行获取一些币种的数据
-def single_thread_get_binance_coin_future_candle_data(exchange, symbol_config, symbol_info, time_interval, run_time, candle_num):
+def single_thread_get_binance_coin_future_candle_data(exchange, symbol_config, symbol_info, time_interval, run_time,
+                                                      candle_num):
     """
     获取所有币种的k线数据，并初步处理
     :param exchange:
@@ -291,7 +290,6 @@ def single_thread_get_binance_coin_future_candle_data(exchange, symbol_config, s
 
 # ===获取需要的币种的历史K线数据。
 def get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval, candle_num, if_print=True):
-
     symbol_candle_data = dict()  # 用于存储K线数据
     print('获取交易币种的历史K线数据')
 
@@ -316,7 +314,6 @@ def get_binance_coin_future_history_candle_data(exchange, symbol_config, time_in
 
 # ===获取当前币本位合约中币的总数
 def binance_update_cfuture_balance(exchange, symbol_config, symbol_info):
-
     # 通过交易所接口获取合约账户信息
     # future_info = exchange.dapiPrivateGetAccount()
     future_info = retry_wrapper(exchange.dapiPrivateGetAccount, act_name='查看合约账户信息')
@@ -383,10 +380,12 @@ def binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode):
     # 根据持仓信息、账户信息中的值填充symbol_info
     symbol_info['未实现盈亏'] = positions_df['unrealizedProfit']  # 使用标记价格计算
     symbol_info['持仓均价'] = positions_df['entryPrice']
-    symbol_info['合约币数'] = positions_df['notionalValue']  # 开仓张数 * 合约面值 / 标记价格  https://www.binance.com/zh-CN/support/faq/d33f37e2c7fe4da3b35ffc904e8fbab5
+    symbol_info['合约币数'] = positions_df[
+        'notionalValue']  # 开仓张数 * 合约面值 / 标记价格  https://www.binance.com/zh-CN/support/faq/d33f37e2c7fe4da3b35ffc904e8fbab5
     for symbol in symbol_config.keys():
         coin = symbol.split('USD')[0]  # 币安之后如果不用USD计价了，这个地方需要改。
-        symbol_info.at[symbol, '原始币数'] = assets_df.at[coin, 'walletBalance']  # https://www.binance.com/zh-CN/support/faq/5d62f8be18d24544b5b6156094c16bf7
+        symbol_info.at[symbol, '原始币数'] = assets_df.at[
+            coin, 'walletBalance']  # https://www.binance.com/zh-CN/support/faq/5d62f8be18d24544b5b6156094c16bf7
     symbol_info['账户币数'] = symbol_info['原始币数'] + symbol_info['未实现盈亏']
 
     # 计算合约张数：合约张数 =（未实现盈亏 + 合约币数）x 持仓均价 / 合约面值
@@ -404,23 +403,23 @@ def binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode):
         symbol_info['期现仓差'] = symbol_info['现货多头'] + symbol_info['期货头寸']
 
         # 期现仓差在合约面值之内，相当于期现套利平衡状态，相当于持有现金
-        symbol_info.loc[abs(symbol_info['期现仓差']) < symbol_info['合约面值'], '持仓方向_'+mode] = 0
+        symbol_info.loc[abs(symbol_info['期现仓差']) < symbol_info['合约面值'], '持仓方向_' + mode] = 0
         # 现货多头占优，相当于做多
-        symbol_info.loc[symbol_info['期现仓差'] >= symbol_info['合约面值'], '持仓方向_'+mode] = 1
+        symbol_info.loc[symbol_info['期现仓差'] >= symbol_info['合约面值'], '持仓方向_' + mode] = 1
         # 期货空头占优，相当于做空
-        symbol_info.loc[symbol_info['期现仓差'] <= -symbol_info['合约面值'], '持仓方向_'+mode] = -1
+        symbol_info.loc[symbol_info['期现仓差'] <= -symbol_info['合约面值'], '持仓方向_' + mode] = -1
         # 例外情况
-        symbol_info.loc[symbol_info['合约张数'] == 0, '持仓方向_'+mode] = 1  # 当没有持仓时，持仓均价为0，现货多头为0；期货头寸为0，整体为0。
-        symbol_info.loc[symbol_info['原始币数'] == 0, '持仓方向_'+mode] = None  # 账户中没有币
+        symbol_info.loc[symbol_info['合约张数'] == 0, '持仓方向_' + mode] = 1  # 当没有持仓时，持仓均价为0，现货多头为0；期货头寸为0，整体为0。
+        symbol_info.loc[symbol_info['原始币数'] == 0, '持仓方向_' + mode] = None  # 账户中没有币
         # 删除数据
         for i in ['现货多头', '期货头寸', '期现仓差', '合约币数']:
             del symbol_info[i]
 
     # ===判断币模式的持仓方向：
     elif mode == '币模式':
-        symbol_info.loc[symbol_info['合约张数'] == 0, '持仓方向_'+mode] = 0  # 相当于屯币状态
-        symbol_info.loc[symbol_info['合约张数'] > 0, '持仓方向_'+mode] = 1  # 用屯币做保证金做多
-        symbol_info.loc[symbol_info['合约张数'] < 0, '持仓方向_'+mode] = -1  # 用屯币做保证金做空
+        symbol_info.loc[symbol_info['合约张数'] == 0, '持仓方向_' + mode] = 0  # 相当于屯币状态
+        symbol_info.loc[symbol_info['合约张数'] > 0, '持仓方向_' + mode] = 1  # 用屯币做保证金做多
+        symbol_info.loc[symbol_info['合约张数'] < 0, '持仓方向_' + mode] = -1  # 用屯币做保证金做空
 
     return symbol_info
 
@@ -483,7 +482,7 @@ def calculate_signal(symbol_info, symbol_config, symbol_candle_data, mode):
 
         # 赋值相关数据
         df = symbol_candle_data[symbol].copy()  # 最新数据
-        now_pos = symbol_info.at[symbol, '持仓方向_'+mode]  # 当前持仓方向
+        now_pos = symbol_info.at[symbol, '持仓方向_' + mode]  # 当前持仓方向
         avg_price = symbol_info.at[symbol, '持仓均价']  # 当前持仓均价
 
         # 需要计算的目标仓位
@@ -491,7 +490,8 @@ def calculate_signal(symbol_info, symbol_config, symbol_candle_data, mode):
 
         # 根据策略计算出目标交易信号。
         if not df.empty:  # 当原始数据不为空的时候
-            target_pos = getattr(Signals, symbol_config[symbol]['strategy_name'])(df, now_pos, avg_price, symbol_config[symbol]['para'])
+            target_pos = getattr(Signals, symbol_config[symbol]['strategy_name'])(df, now_pos, avg_price,
+                                                                                  symbol_config[symbol]['para'])
         symbol_info.at[symbol, '目标持仓'] = target_pos  # 这行代码似乎可以删除
 
         symbol_info.at[symbol, '信号'] = 'NaN'
@@ -611,6 +611,291 @@ def cal_all_order_info(symbol_signal, symbol_info, symbol_config, exchange, mode
 
     return symbol_order_params
 
-# 建立初始状态
-def trading_initialization(symbol_config):
-    return
+
+# 建立初始状态,合约账户未开仓,合约账户币种余额为0
+def trading_initialization(exchange, funding_config, symbol_config):
+    if funding_config['fee_use_bnb'] is True:
+        future_fee_rate = 0.0
+        spot_fee_rate = 0.0
+    else:
+        future_fee_rate = 4 / 10000
+        spot_fee_rate = 1 / 1000
+    for symbol in symbol_config.keys():
+        symbol_spot = symbol[:symbol.find('USD')].upper()
+        df_balance = pd.DataFrame(exchange.dapiPrivateGetBalance())
+        symbol_balance = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'balance'][0])
+        symbol_withdraw = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'withdrawAvailable'][0])
+        if symbol_config['initial_funds'] or symbol_balance - 0.000001 <= 0:
+            # 如果保证金为0，将强制初始化
+            symbol_spot_qr = symbol_spot + '_' + funding_config['funding_coin'].upper()
+            symbol_spot_tr = symbol_spot + '/' + funding_config['funding_coin'].upper()
+            market = retry_wrapper(exchange.dapiPublicGetExchangeInfo())
+            df_market = pd.DataFrame(market['symbols']).set_index('symbol')
+            coin_precision = int(df_market.loc[symbol, 'pricePrecision'])
+            contract_size = int(df_market.loc[symbol, 'contractSize'])
+            spot_sell1_price = retry_wrapper(
+                exchange.fapiPublicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice'])
+            spot_amount = symbol_config[symbol]['initial_usd_funds'] / spot_sell1_price
+            df_position = pd.DataFrame(exchange.dapiPrivateGetPositionRisk())
+            position_amt = float(df_position.loc[(df_position['symbol'] == symbol) & (df_position['positionSide'] == 'BOTH'), 'positionAmt'][0])
+            if position_amt != 0:
+                if position_amt < -symbol_config[symbol]['initial_usd_funds']/contract_size:
+                    # 如果已有空头仓位大于预设仓位，多余部分平空，多余保证金转到现货。
+                    print('%s已持有空仓%f张，且空仓量大于预设initial_usd_funds的张数%f张，多余的仓位平空' % (symbol, position_amt, -symbol_config[symbol]['initial_usd_funds']/contract_size))
+                    future_sell1_price = retry_wrapper(exchange.dapiPublicGetTickerBookTicker(params={'symbol': symbol})[0][
+                        'askPrice'])
+                    price = float(future_sell1_price) * 1.02
+                    price = round(price, coin_precision)
+                    deal_amt = -symbol_config[symbol]['initial_usd_funds']/contract_size - position_amt
+                    future_order_info = binance_future_place_order(exchange=exchange,
+                                                                   symbol=symbol,
+                                                                   long_or_short='开多', price=price,
+                                                                   amount=deal_amt)
+                    print('平空多余仓位%f' % deal_amt)
+                    print(future_order_info)
+                    surplus_balance = symbol_balance - spot_amount
+                    if surplus_balance > symbol_withdraw:
+                        print('%s剩余保证金不足，可能是杠杆倍数太低所致，请调整杠杆倍数，程序退出' % symbol)
+                        raise Exception
+                    else:
+                        print('%s划转多余保证金%s%f到现货账户' % (symbol, symbol_spot, surplus_balance))
+                        binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=surplus_balance, from_account='合约',
+                                                 to_account='币币')
+                else:
+                    # 如果已有空头仓位小于预设仓位，全部平空，保证金划转现货。
+                    print('%s已持有空仓%f张，且空仓量小预设initial_usd_funds的张数%f张，仓位全部平空，重新初始化建仓' % (symbol, position_amt, -symbol_config[symbol]['initial_usd_funds']/contract_size))
+                    future_sell1_price = retry_wrapper(exchange.dapiPublicGetTickerBookTicker(params={'symbol': symbol})[0][
+                        'askPrice'])
+                    price = float(future_sell1_price) * 1.02
+                    price = round(price, coin_precision)
+                    long_or_short = '开空' if position_amt > 0 else '开多'
+                    deal_amt = abs(position_amt)
+                    future_order_info = binance_future_place_order(exchange=exchange,
+                                                                   symbol=symbol,
+                                                                   long_or_short=long_or_short, price=price,
+                                                                   amount=deal_amt)
+                    print('平掉全部仓位%f' % position_amt)
+                    print(future_order_info)
+                    position_amt = 0
+            if position_amt == 0:
+                symbol_withdraw = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'withdrawAvailable'][0])
+                if symbol_withdraw - 0.0000001 > 0:
+                    print('重新初始化，%s划转保证金%s%f到现货账户' % (symbol, symbol_spot, symbol_withdraw))
+                    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=symbol_withdraw,
+                                             from_account='合约',
+                                             to_account='币币')
+                if funding_config['funding_from_spot']:
+                    print('尝试从现货账户提取保证金......')
+                    df_spot = retry_wrapper(pd.DataFrame(exchange.privateGetAccount()['balances']))
+                    symbol_balance = float(df_spot.loc[df_spot['asset'] == symbol_spot, 'free'][0])
+                    if symbol_balance > spot_amount:
+                        print('现货账户有%s数量：%f，策略需求数量%f，数量足够，故从现货提取保证金' % symbol_spot, symbol_balance, spot_amount)
+                        binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=spot_amount, from_account='币币',
+                                                 to_account='合约')
+                        time.sleep(3)
+                        future_buy1_price = exchange.dapiPublicGetTickerBookTicker(params={'symbol': symbol})[0]['bidPrice']
+                        price = float(future_buy1_price) * 0.98
+                        price = round(price, coin_precision)
+                        future_order_info = retry_wrapper(
+                            binance_future_place_order(exchange=exchange, symbol=future_buy1_price,
+                                                       long_or_short='开空', price=price,
+                                                       amount=future_buy1_price))
+                        print('合约开空，信息如下：')
+                        print(future_order_info)
+                    else:
+                        print('现货账户有%s数量：%f，策略需求数量%f，数量不足，故需买入现货' % symbol_spot, symbol_balance, spot_amount)
+                        funding_config['funding_from_spot'] = False
+                if funding_config['funding_from_spot'] is False:
+                    deal_num = 1
+                    residue_num = symbol_config[symbol]['initial_usd_funds']
+                    while True:
+                        amount = min(funding_config['execute_amount'], residue_num)
+                        spot_sell1_price, future_buy1_price = diff_future_spot(exchange, symbol_spot_qr, symbol, funding_config['r_threshold'])
+                        future_contract_num = int(amount / contract_size)  # 买入合约张数
+                        future_coin_num = future_contract_num * contract_size / float(future_buy1_price)  # 合约对应币数量
+                        future_fee = future_coin_num * future_fee_rate  # 需要取整
+                        buy_spot_num = future_coin_num / (1 - spot_fee_rate) + future_fee  # 需要取整
+
+                        price = float(spot_sell1_price) * 1.02
+                        spot_order_info = binance_spot_place_order(exchange=exchange, symbol=symbol_spot_tr,
+                                                                   long_or_short='买入', price=price, amount=buy_spot_num)
+                        print('买入%s现货: %f,' % symbol_spot, buy_spot_num)
+                        print(spot_order_info)
+                        if deal_num == 1:
+                            # 获取币币账户买入币的数量
+                            time.sleep(2)
+                            balance = exchange.fetch_balance()
+                            num = min(float(balance[symbol_spot]['free']), buy_spot_num)
+                            print('第一次入金，先划转现货到合约账户')
+                            print('待划转的币的数量：', num)
+                            binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=num, from_account='币币',
+                                                     to_account='合约')
+                        # 做空合约
+                        price = float(future_buy1_price) * 0.98
+                        price = round(price, coin_precision)
+                        future_order_info = binance_future_place_order(exchange=exchange,
+                                                                       symbol=symbol,
+                                                                       long_or_short='开空', price=price,
+                                                                       amount=future_contract_num)
+                        print('开空%s合约: %f张' % symbol, future_contract_num)
+                        print(future_order_info)
+
+                        if deal_num != 1:
+                            # 获取币币账户买入币的数量
+                            time.sleep(2)
+                            balance = retry_wrapper(exchange.fetch_balance())
+                            num = min(float(balance[symbol_spot]['free']), buy_spot_num)
+                            print('第一次入金，先划转现货到合约账户')
+                            print('待划转的币的数量：', num)
+                            binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=num, from_account='币币',
+                                                     to_account='合约')
+                        deal_num += 1
+                        residue_num = residue_num - amount
+                        if residue_num <= 0:
+                            break
+    return True
+
+
+def diff_future_spot(exchange, spot_symbol, future_symbol, r_threshold, sleep_time=2):
+    while True:
+        spot_sell1_price = retry_wrapper(exchange.fapiPublicGetTickerBookTicker(params={'symbol': spot_symbol})['askPrice'])
+        # 获取期货买一数据。因为期货是卖出，取买一。
+        # noinspection PyUnresolvedReferences
+        future_buy1_price = exchange.dapiPublicGetTickerBookTicker(params={'symbol': future_symbol})[0][
+            'bidPrice']
+
+        # 计算价差
+        r = float(future_buy1_price) / float(spot_sell1_price) - 1
+        print('现货价格：%.4f，期货价格：%.4f，价差：%.4f%%' % (float(spot_sell1_price), float(future_buy1_price), r * 100))
+
+        # ===判断价差是否满足要求
+        if r < r_threshold:
+            print('利差小于目标阀值，不入金')
+            time.sleep(sleep_time)
+        else:
+            print('利差大于目标阀值，开始入金')
+            return spot_sell1_price, future_buy1_price
+
+# 'BNBUSD_PERP': {'leverage': 1.5,
+#                     'strategy_name': 'real_signal_simple_bolling_we',
+#                     'para': [100, 1.7],
+#                     'face_value': 10,
+#                     'initial_usd_funds': 20,
+#                     '币模式保证金': 10,
+#                     },
+
+
+# 在币币账户下单
+def binance_spot_place_order(exchange, symbol, long_or_short, price, amount):
+    """
+    :param exchange:  ccxt交易所
+    :param symbol: 币币交易对代码，例如'BTC/USDT'
+    :param long_or_short:  两种类型：买入、卖出
+    :param price:  下单价格
+    :param amount:  下单数量
+    :return:
+    """
+
+    for i in range(5):
+        try:
+            # 买
+            if long_or_short == '买入':
+                order_info = retry_wrapper(exchange.create_limit_buy_order(symbol, amount, price))  # 买单
+            # 卖
+            elif long_or_short == '卖出':
+                order_info = retry_wrapper(exchange.create_limit_sell_order(symbol, amount, price))  # 卖单
+            else:
+                raise ValueError('long_or_short只能是：`买入`或者`卖出`')
+
+            print('binance币币交易下单成功：', symbol, long_or_short, price, amount)
+            print('下单信息：', order_info, '\n')
+            return order_info
+
+        except Exception as e:
+            print('binance币币交易下单报错，1s后重试', e)
+            time.sleep(1)
+
+    print('binance币币交易下单报错次数过多，程序终止')
+    exit()
+
+
+# 在期货合约账户下限价单
+def binance_future_place_order(exchange, symbol, long_or_short, price, amount):
+    """
+    :param exchange:  ccxt交易所
+    :param symbol: 合约代码，例如'BTCUSD_210625'
+    :param long_or_short:  四种类型：开多、开空、平多、平空
+    :param price: 开仓价格
+    :param amount: 开仓数量，这里的amount是合约张数
+    :return:
+
+    timeInForce参数的几种类型
+    GTC - Good Till Cancel 成交为止
+    IOC - Immediate or Cancel 无法立即成交(吃单)的部分就撤销
+    FOK - Fill or Kill 无法全部立即成交就撤销
+    GTX - Good Till Crossing 无法成为挂单方就撤销
+
+    """
+
+    if long_or_short == '开空':
+        side = 'SELL'
+    elif long_or_short == '开多':
+        side = 'BUY'
+    # 确定下单参数
+    # 开空
+    params = {
+        'side': side,
+        # 'positionSide': 'SHORT',
+        'symbol': symbol,
+        'type': 'LIMIT',
+        'price': price,  # 下单价格
+        'quantity': amount,  # 下单数量，注意此处是合约张数,
+        'timeInForce': 'GTC',  # 含义见本函数注释部分
+    }
+    # 尝试下单
+    for i in range(5):
+        try:
+            params['timestamp'] = int(time.time() * 1000)
+            order_info = retry_wrapper(exchange.dapiPrivatePostOrder(params))
+            print('币安合约交易下单成功：', symbol, long_or_short, price, amount)
+            print('下单信息：', order_info, '\n')
+            return order_info
+        except Exception as e:
+            print('币安合约交易下单报错，1s后重试...', e)
+            time.sleep(1)
+
+    print('币安合约交易下单报错次数过多，程序终止')
+    exit()
+
+
+# binance各个账户间转钱
+def binance_account_transfer(exchange, currency, amount, from_account='币币', to_account='合约'):
+    """
+    """
+
+    if from_account == '币币' and to_account == '合约':
+        transfer_type = 'MAIN_CMFUTURE'
+    else:
+        raise ValueError('未能识别`from_account`和`to_account`的组合，请参考官方文档')
+
+    # 构建参数
+    params = {
+        'type': transfer_type,
+        'asset': currency,
+        'amount': amount,
+    }
+
+    # 开始转账
+    for i in range(5):
+        try:
+            params['timestamp'] = int(time.time() * 1000)
+            transfer_info = retry_wrapper(exchange.sapiPostAssetTransfer(params=params))
+            print('转账成功：', from_account, 'to', to_account, amount)
+            print('转账信息：', transfer_info, '\n')
+            return transfer_info
+        except Exception as e:
+            print('转账报错，1s后重试', e)
+            time.sleep(1)
+
+    print('转账报错次数过多，程序终止')
+    exit()
