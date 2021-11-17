@@ -705,7 +705,7 @@ def trading_initialization(exchange, funding_config, symbol_config):
                     else:
                         print('现货账户有%s数量：%f，策略需求数量%f，数量不足，故需买入现货' % symbol_spot, symbol_balance, spot_amount)
                         funding_config['funding_from_spot'] = False
-                elif funding_config['funding_from_spot'] is False:
+                if funding_config['funding_from_spot'] is False:
                     deal_num = 1
                     residue_num = symbol_config[symbol]['initial_usd_funds']
                     while True:

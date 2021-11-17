@@ -56,13 +56,13 @@ symbol_config = {
                      'initial_usd': 20,  # u模式初始投入的资金美元价值initial_usd
                      '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                      },
-    'BNBUSD_PERP': {'leverage': 1.5,
-                    'strategy_name': 'real_signal_simple_bolling_we',
-                    'para': [100, 1.7],
-                    'initial_funds': True,
-                    'initial_usd_funds': 20,
-                    '币模式保证金': 10,
-                    },
+    # 'BNBUSD_PERP': {'leverage': 1.5,
+    #                 'strategy_name': 'real_signal_simple_bolling_we',
+    #                 'para': [100, 1.7],
+    #                 'initial_funds': True,
+    #                 'initial_usd_funds': 20,
+    #                 '币模式保证金': 10,
+    #                 },
 }
 
 
