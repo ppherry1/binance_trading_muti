@@ -21,11 +21,12 @@ mode = 'u模式'  # u模式，币模式
 time_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所支持的K线才行。最好不要低于5m
 
 # 设置初始资金来源相关参数
-funding_cofig = {
-    'funding_from_spot': True,  # 是否从现货中提取交易币种作为保证金，这里选True，则优先从现货划转，不足的话再买。选False则是直接买。
-    'funding_coin': 'USDT',  # 用于建立初始资金的币种
+funding_config = {
+    'funding_from_spot': True,  # 从现货中直接提取交易币种作为保证金，这里选True。注意！如果现货不足，则本参数会自动转为False，也就是直接买现货。
+    'funding_coin': 'USDT',  # 用于买入现货的交易币种，目前仅能填USD等价币，如USDT，BUSD
     'r_threshold': 0.01,  # 建仓的最小期现差阈值,可设定为-1，则为忽略阈值，直接建仓
     'execute_amount': 10,  # 每次建仓的美元价值，BTC最小为100，其他币最小为10。
+    'fee_use_bnb': True  # 使用BNB支付手续费
 }
 
 
@@ -48,16 +49,17 @@ symbol_config = {
     'DOGEUSD_PERP': {'leverage': 1.5,
                      'strategy_name': 'real_signal_simple_bolling_we',  # 使用的策略的名称
                      'para': [100, 1.6],  # 参数
-                     'face_value': 10,  # 合约面值（张）
                      'initial_funds': True,  # 这里填True，则运行时按照下面所设置的initial_usd进行到等值套保状态，如有多余的币会转到现货账户，币不足的话则会购买
-                     # 注意！如果initial_funds写True有可能会强行平掉已开的套保以外的多余仓位，相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
+                     # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
+                     # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
+                     # 如果监测合约账户未开仓，将强制初始化
                      'initial_usd': 20,  # u模式初始投入的资金美元价值initial_usd
                      '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                      },
     'BNBUSD_PERP': {'leverage': 1.5,
                     'strategy_name': 'real_signal_simple_bolling_we',
                     'para': [100, 1.7],
-                    'face_value': 10,
+                    'initial_funds': True,
                     'initial_usd_funds': 20,
                     '币模式保证金': 10,
                     },
@@ -79,7 +81,7 @@ def main():
     max_candle_num = 5  # 每次获取的K线数量
     symbol_candle_data = get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval,
                                                                      max_candle_num, if_print=True)
-    trading_initialization(funding_cofig, symbol_config)
+    trading_initialization(exchange, funding_config, symbol_config)
     # =进入每次的循环
     while True:
         # ==========获取持仓数据==========
