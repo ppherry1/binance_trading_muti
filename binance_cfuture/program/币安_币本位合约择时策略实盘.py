@@ -16,6 +16,7 @@ pd.set_option('display.unicode.east_asian_width', True)
 # ==========配置运行相关参数==========
 # =交易模式设置
 mode = 'u模式'  # u模式，币模式
+deal_adl = False  #
 
 # =k线周期
 time_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所支持的K线才行。最好不要低于5m
@@ -24,8 +25,8 @@ time_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所�
 funding_config = {
     'funding_from_spot': True,  # 从现货中直接提取交易币种作为保证金，这里选True。注意！如果现货不足，则本参数会自动转为False，也就是直接买现货。
     'funding_coin': 'USDT',  # 用于买入现货的交易币种，目前仅能填USD等价币，如USDT，BUSD
-    'r_threshold': 0.01,  # 建仓的最小期现差阈值,可设定为-1，则为忽略阈值，直接建仓
-    'execute_amount': 10,  # 每次建仓的美元价值，BTC最小为100，其他币最小为10。
+    'r_threshold': 0.0007,  # 建仓的最小期现差阈值,可设定为-1，则为忽略阈值，直接建仓
+    'execute_amount': 20,  # 每次建仓的美元价值，BTC最小为200，其他币最小为20。
     'fee_use_bnb': True  # 使用BNB支付手续费
 }
 
@@ -47,13 +48,13 @@ exchange = ccxt.binance(BINANCE_CONFIG)  # 交易所api
 # 往每个币种的账户里面放不同的钱，就代表了每个币种的仓位
 symbol_config = {
     'DOGEUSD_PERP': {'leverage': 1.5,
-                     'strategy_name': 'real_signal_simple_bolling_we',  # 使用的策略的名称
+                     'strategy_name': 'real_signal_none',  # 使用的策略的名称
                      'para': [100, 1.6],  # 参数
                      'initial_funds': True,  # 这里填True，则运行时按照下面所设置的initial_usd进行到等值套保状态，如有多余的币会转到现货账户，币不足的话则会购买
                      # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
                      # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
                      # 如果监测到合约账户币种保证金为0，将进行强制初始化
-                     'initial_usd': 20,  # u模式初始投入的资金美元价值initial_usd
+                     'initial_usd_funds': 40,  # u模式初始投入的资金美元价值initial_usd
                      '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                      },
     # 'BNBUSD_PERP': {'leverage': 1.5,
@@ -127,7 +128,8 @@ def main():
 
         # ==========检测是否需要adl==========
         time.sleep(medium_sleep_time)
-        deal_with_binance_adl(exchange, symbol_info, symbol_config)
+        if deal_adl:
+            deal_with_binance_adl(exchange, symbol_info, symbol_config)
 
         # 本次循环结束
         print('\n', '-' * 20, '本次循环结束，%f秒后进入下一次循环' % long_sleep_time, '-' * 20, '\n\n')
@@ -136,8 +138,8 @@ def main():
 
 if __name__ == '__main__':
     while True:
-        try:
+        # try:
             main()
-        except Exception as err:
-            print('系统出错，10s之后重新运行，出错原因：' + str(err))
-            time.sleep(long_sleep_time)
+        # except Exception as err:
+        #     print('系统出错，10s之后重新运行，出错原因：' + str(err))
+        #     time.sleep(long_sleep_time)
