@@ -621,11 +621,12 @@ def trading_initialization(exchange, funding_config, symbol_config):
         future_fee_rate = 4 / 10000
         spot_fee_rate = 1 / 1000
     for symbol in symbol_config.keys():
-        df_position = retry_wrapper(pd.DataFrame(exchange.dapiPrivateGetPositionRisk()))
-        position_amt = float(df_position.loc[(df_position['symbol'] == symbol) & (df_position['positionSide'] == 'BOTH'), 'positionAmt'][0])
-        if symbol_config['initial_funds'] or position_amt == 0:
-            # 如果仓位为0，将强制初始化
-            symbol_spot = symbol[:symbol.find('USD')].upper()
+        symbol_spot = symbol[:symbol.find('USD')].upper()
+        df_balance = pd.DataFrame(exchange.dapiPrivateGetBalance())
+        symbol_balance = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'balance'][0])
+        symbol_withdraw = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'withdrawAvailable'][0])
+        if symbol_config['initial_funds'] or symbol_balance - 0.000001 <= 0:
+            # 如果保证金为0，将强制初始化
             symbol_spot_qr = symbol_spot + '_' + funding_config['funding_coin'].upper()
             symbol_spot_tr = symbol_spot + '/' + funding_config['funding_coin'].upper()
             market = retry_wrapper(exchange.dapiPublicGetExchangeInfo())
@@ -635,11 +636,8 @@ def trading_initialization(exchange, funding_config, symbol_config):
             spot_sell1_price = retry_wrapper(
                 exchange.fapiPublicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice'])
             spot_amount = symbol_config[symbol]['initial_usd_funds'] / spot_sell1_price
-            df_balance = pd.DataFrame(exchange.dapiPrivateGetBalance())
-            symbol_balance = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'balance'][0])
-            symbol_withdraw = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'withdrawAvailable'][0])
-            # df_position = pd.DataFrame(exchange.dapiPrivateGetPositionRisk())
-            # position_amt = float(df_position.loc[(df_position['symbol'] == symbol) & (df_position['positionSide'] == 'BOTH'), 'positionAmt'][0])
+            df_position = pd.DataFrame(exchange.dapiPrivateGetPositionRisk())
+            position_amt = float(df_position.loc[(df_position['symbol'] == symbol) & (df_position['positionSide'] == 'BOTH'), 'positionAmt'][0])
             if position_amt != 0:
                 if position_amt < -symbol_config[symbol]['initial_usd_funds']/contract_size:
                     # 如果已有空头仓位大于预设仓位，多余部分平空，多余保证金转到现货。
