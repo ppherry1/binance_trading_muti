@@ -47,7 +47,7 @@ data_save_dir = os.path.join(root_path, 'data', 'binance_trading_data')
 #     time_interval = symbol_config_dict[account_name]['time_interval']
 #     if time_interval not in time_interval_list:
 #         time_interval_list.append(time_interval)
-deal_type = ['cfuture', 'infnet']
+deal_type = ['infnet', 'cfuture']
 time_interval_list = ['5m', '15m', '30m', '1h', '2h']
 offset_time = '-5min'
 min_time_interval = time_interval_list[0]
@@ -87,14 +87,16 @@ def main():
 
     # ===获取需要交易币种的历史数据。单账户程序：数据存到symbol_candle_data，多账户程序：数据存到本地csv文件
     # 遍历获取币种历史数据
-    for time_interval in time_interval_list:
-        for symbol in symbol_config.keys():
-            print('抓取历史数据：', symbol_config[symbol]['instrument_id'], time_interval)
-            # 获取币种的历史数据，会删除最新一行的数据
-            df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_id'], time_interval, max_len=max_len)
-            # 存储数据到本地
-            df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), index=False)
-            time.sleep(medium_sleep_time)  # 短暂的sleep
+
+    for symbol in symbol_config.keys():
+        print('抓取历史数据：', symbol_config[symbol]['instrument_id'], min_time_interval)
+        # 获取币种的历史数据，会删除最新一行的数据
+        df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_id'], symbol_config[symbol]['instrument_id'], time_interval, max_len=max_len)
+        # 存储数据到本地
+        # df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), index=False)
+        # time.sleep(medium_sleep_time)  # 短暂的sleep
+
+    # for time_interval in time_interval_list:
 
 
     # ===进入每次的循环，注意：每次循环的时间是min_time_interval

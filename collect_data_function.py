@@ -437,7 +437,7 @@ def cal_need_save_time_interval_this_run_time(run_time, time_interval_list):
 
 
 # ===获取全部历史数据
-def fetch_binance_symbol_history_candle_data(exchange, symbol, time_interval, max_len, max_try_amount=5):
+def fetch_binance_symbol_history_candle_data(exchange, ins_type, symbol, time_interval, max_len, max_try_amount=5):
     """
     获取某个币种在okex交易所所有能获取的历史数据，目前v3接口最多获取1440根
     :param exchange:
@@ -467,7 +467,10 @@ def fetch_binance_symbol_history_candle_data(exchange, symbol, time_interval, ma
         kline_data = []
         for i in range(max_try_amount):
             try:
-                kline_data = exchange.fetch_ohlcv(symbol=symbol, since=since, timeframe=time_interval)
+                if ins_type == 'spot':
+                    kline_data = exchange.fetch_ohlcv(symbol=symbol, since=since, timeframe=time_interval)
+                elif ins_type == 'cfuture':
+                    kline_data = exchange.dapiPublicGetKlines(params={'symbol': symbol, 'startTime': since, 'interval':time_interval})
                 break
             except Exception as e:
                 print(e)
