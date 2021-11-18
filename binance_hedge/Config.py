@@ -25,3 +25,5 @@ binance_order_type = {
     '平空开多': 'BUY',
     '平多开空': 'SELL',
 }
+
+

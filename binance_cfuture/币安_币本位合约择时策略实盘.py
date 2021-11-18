@@ -5,6 +5,8 @@
 """
 import pandas as pd
 import ccxt
+from binance_cfuture.Config import *
+from binance_cfuture.Function import *
 
 pd.set_option('display.max_rows', 1000)
 pd.set_option('expand_frame_repr', False)  # 当列太多时不换行

@@ -9,14 +9,23 @@ import os
 import pandas as pd
 from datetime import datetime
 import glob
-from okex_cta_trading.Config import *
-from okex_cta_trading.Function import *
+import binance_cfuture.Config as cfuture
+import binance_infnet.Config as infnet
 pd.set_option('display.max_rows', 1000)
 pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
 # 设置命令行输出时的列对齐功能
 pd.set_option('display.unicode.ambiguous_as_wide', True)
 pd.set_option('display.unicode.east_asian_width', True)
+import os
+from collect_data_function import *
+from collect_data_config import *
 
+
+# =====常规config信息
+# 获取项目根目录
+_ = os.path.abspath(os.path.dirname(__file__))  # 返回当前文件路径
+root_path = os.path.abspath(os.path.join(_, '..'))  # 返回根目录文件夹
+data_save_dir = os.path.join(root_path, 'data', 'binance_trading_data')
 
 """
 程序思路：
@@ -38,7 +47,9 @@ pd.set_option('display.unicode.east_asian_width', True)
 #     time_interval = symbol_config_dict[account_name]['time_interval']
 #     if time_interval not in time_interval_list:
 #         time_interval_list.append(time_interval)
+deal_type = ['cfuture', 'infnet']
 time_interval_list = ['5m', '15m', '30m', '1h', '2h']
+offset_time = '-5min'
 min_time_interval = time_interval_list[0]
 candle_num = 30  # 每次获取K线的数量。必须保证candle_num的数量足够大，可以保证min_time_interval可以resample出最大的时间周期
 print('需要抓取的时间周期：', time_interval_list)
@@ -47,24 +58,26 @@ print('最小的时间周期是：', min_time_interval)  # 其他时间周期必
 
 # =需要抓取的币种
 symbol_config = {}
-for account_name in symbol_config_dict.keys():
-    for symbol in symbol_config_dict[account_name]['symbol_config']:
-        symbol_config[symbol] = {
-            'instrument_id': symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_id']
-        }
+for strategy_type in deal_type:
+    for account_name in eval(strategy_type).symbol_config_dict.keys():
+        for symbol in eval(strategy_type).symbol_config_dict[account_name]['symbol_config']:
+            symbol_config[symbol] = {
+                'instrument_id': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_id'],
+                'instrument_type': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_type'] if 'instrument_type' in eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol].keys() else 'ufuture'
+            }
 print('需要抓取的币种：', symbol_config)
 # symbol_config更适合list，将symbol_config做成dict，只是为了和之前的程序兼容
 
 # =====其他配置信息
 # =exchange
-OKEX_CONFIG = {
+BINANCE_CONFIG = {
     # 不需要api，给了api反而会受到limit限制
     'timeout': 1000,  # timeout时间短一点
     'rateLimit': 10,
-    'hostname': HOST_NAME,  # 无法fq的时候启用
+    'hostname': 'fapi.binance.com',  # 无法fq的时候启用
     'enableRateLimit': False
 }
-exchange = ccxt.okex(OKEX_CONFIG)
+exchange = ccxt.binance(BINANCE_CONFIG)
 
 # =设定最多收集多少根K线，okex_v3不能超过1440根
 max_len = 500
@@ -78,7 +91,7 @@ def main():
         for symbol in symbol_config.keys():
             print('抓取历史数据：', symbol_config[symbol]['instrument_id'], time_interval)
             # 获取币种的历史数据，会删除最新一行的数据
-            df = fetch_okex_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_id'], time_interval, max_len=max_len)
+            df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_id'], time_interval, max_len=max_len)
             # 存储数据到本地
             df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), index=False)
             time.sleep(medium_sleep_time)  # 短暂的sleep

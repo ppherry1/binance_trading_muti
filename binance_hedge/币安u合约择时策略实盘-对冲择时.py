@@ -10,8 +10,8 @@
 """
 import pandas as pd
 import ccxt
-from program.Function import *
-from program.Config import *
+from binance_hedge.Function import *
+from binance_hedge.Config import *
 import json5
 
 pd.set_option('display.max_rows', 1000)

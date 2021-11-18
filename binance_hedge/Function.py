@@ -13,8 +13,8 @@ import math
 import pandas as pd
 from datetime import datetime, timedelta
 import time
-from program.Config import *
-from program import Signals
+from binance_hedge.Config import *
+from binance_hedge import Signals
 
 
 # ==========辅助功能函数==========
