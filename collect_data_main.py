@@ -152,7 +152,7 @@ def main():
                     else:
                         rule = time_interval
                     # 转化周期
-                    df = recent_candle_data[symbol].resample(rule=rule, offset=offset_time_re, on='candle_begin_time_GMT8').agg(agg_dict).reset_index()
+                    df = recent_candle_data[symbol].resample(rule=rule, offset=offset_time_re, on='candle_begin_time_GMT8').agg(agg_dict)
                     # 保存最后一行数据，保留index
                     df.iloc[-1:, :].to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), mode='a', header=None)
                 else:  # 不需要转换的数据周期：等于最小时间周期
