@@ -111,7 +111,7 @@ def ccxt_fetch_future_position(exchange, max_try_amount=5):
 
 
 # ===通过ccxt获取K线数据
-def ccxt_fetch_candle_data(exchange, symbol, time_interval, limit, max_try_amount=5):
+def ccxt_fetch_candle_data(exchange, ins_type, symbol, time_interval, limit, max_try_amount=5):
     """
     本程序使用ccxt的fetch_ohlcv()函数，获取最新的K线数据，用于实盘
     :param exchange:
@@ -124,14 +124,23 @@ def ccxt_fetch_candle_data(exchange, symbol, time_interval, limit, max_try_amoun
     for _ in range(max_try_amount):
         try:
             # 获取数据
-            data = exchange.fetch_ohlcv(symbol=symbol, timeframe=time_interval, limit=limit)
+            if ins_type == 'spot':
+                kline_data = exchange.publicGetKlines(
+                    params={'symbol': symbol, 'interval': time_interval, 'limit': limit})
+            elif ins_type == 'cfuture':
+                kline_data = exchange.dapiPublicGetKlines(
+                    params={'symbol': symbol, 'interval': time_interval, 'limit': limit})
             # 整理数据
-            df = pd.DataFrame(data, dtype=float)
-            df.rename(columns={0: 'MTS', 1: 'open', 2: 'high',
-                               3: 'low', 4: 'close', 5: 'volume'}, inplace=True)
+            df = pd.DataFrame(kline_data, dtype=float)
+            df.rename(columns={0: 'MTS', 1: 'open', 2: 'high', 3: 'low', 4: 'close', 5: 'volume',
+                               6: 'close_MTS', 7: 'quote_volume', 8: 'num', 9: 'initiative_vol',
+                               10: 'initiative_quote_vol'
+                               }, inplace=True)
+            df['candle_begin_time'] = pd.to_datetime(df['MTS'], unit='ms')
             df['candle_begin_time'] = pd.to_datetime(df['MTS'], unit='ms')
             df['candle_begin_time_GMT8'] = df['candle_begin_time'] + timedelta(hours=8)
-            df = df[['candle_begin_time_GMT8', 'open', 'high', 'low', 'close', 'volume']]
+            df = df[['candle_begin_time_GMT8', 'open', 'high', 'low', 'close',
+                     'volume', 'quote_volume', 'initiative_vol', 'initiative_quote_vol']].copy()
             return df
         except Exception as e:
             print('获取fetch_ohlcv获取合约K线数据，失败，稍后重试。失败原因：\n', e)
@@ -258,12 +267,13 @@ def get_candle_data(exchange, symbol_config, time_interval, run_time, max_try_am
 
     # 获取数据合约的相关参数
     instrument_id = symbol_config[symbol]["instrument_id"]  # 合约id
+    instrument_type = symbol_config[symbol]["instrument_type"]  # 类型
     signal_price = None
 
     # 尝试获取数据
     for i in range(max_try_amount):
         # 获取symbol该品种最新的K线数据
-        df = ccxt_fetch_candle_data(exchange, instrument_id, time_interval, limit=candle_num)
+        df = ccxt_fetch_candle_data(exchange, instrument_type, instrument_id, time_interval, limit=candle_num)
         if df.empty:
             continue  # 再次获取
 
@@ -463,12 +473,12 @@ def fetch_binance_symbol_history_candle_data(exchange, ins_type, symbol, time_in
 
     # 循环获取历史数据
     all_kline_data = []
-    while end - since >= time_segment:
+    while end - float(since) >= time_segment:
         kline_data = []
         for i in range(max_try_amount):
             try:
                 if ins_type == 'spot':
-                    kline_data = exchange.fetch_ohlcv(symbol=symbol, since=since, timeframe=time_interval)
+                    kline_data = exchange.publicGetKlines(params={'symbol': symbol, 'startTime': since, 'interval':time_interval})
                 elif ins_type == 'cfuture':
                     kline_data = exchange.dapiPublicGetKlines(params={'symbol': symbol, 'startTime': since, 'interval':time_interval})
                 break
@@ -489,10 +499,13 @@ def fetch_binance_symbol_history_candle_data(exchange, ins_type, symbol, time_in
 
     # 对数据进行整理
     df = pd.DataFrame(all_kline_data, dtype=float)
-    df.rename(columns={0: 'MTS', 1: 'open', 2: 'high', 3: 'low', 4: 'close', 5: 'volume'}, inplace=True)
+    df.rename(columns={0: 'MTS', 1: 'open', 2: 'high', 3: 'low', 4: 'close', 5: 'volume',
+                       6: 'close_MTS', 7: 'quote_volume', 8: 'num', 9: 'initiative_vol', 10: 'initiative_quote_vol'
+                       }, inplace=True)
     df['candle_begin_time'] = pd.to_datetime(df['MTS'], unit='ms')
     df['candle_begin_time_GMT8'] = df['candle_begin_time'] + timedelta(hours=8)
-    df = df[['candle_begin_time_GMT8', 'open', 'high', 'low', 'close', 'volume']]
+    df = df[['candle_begin_time_GMT8', 'open', 'high', 'low', 'close',
+             'volume', 'quote_volume', 'num', 'initiative_vol', 'initiative_quote_vol']].copy()
 
     # 删除重复的数据
     df.drop_duplicates(subset=['candle_begin_time_GMT8'], keep='last', inplace=True)

@@ -24,7 +24,7 @@ from collect_data_config import *
 # =====常规config信息
 # 获取项目根目录
 _ = os.path.abspath(os.path.dirname(__file__))  # 返回当前文件路径
-root_path = os.path.abspath(os.path.join(_, '..'))  # 返回根目录文件夹
+root_path = os.path.abspath(os.path.join(_, '.'))  # 返回根目录文件夹
 data_save_dir = os.path.join(root_path, 'data', 'binance_trading_data')
 
 """
@@ -49,12 +49,25 @@ data_save_dir = os.path.join(root_path, 'data', 'binance_trading_data')
 #         time_interval_list.append(time_interval)
 deal_type = ['infnet', 'cfuture']
 time_interval_list = ['5m', '15m', '30m', '1h', '2h']
-offset_time = '-5min'
+offset_time = '-5m'
 min_time_interval = time_interval_list[0]
 candle_num = 30  # 每次获取K线的数量。必须保证candle_num的数量足够大，可以保证min_time_interval可以resample出最大的时间周期
 print('需要抓取的时间周期：', time_interval_list)
 print('最小的时间周期是：', min_time_interval)  # 其他时间周期必须是最小时间周期的整数倍。
 
+offset_time_re = offset_time.replace('m', 'T') if 'm' in offset_time else str(int(offset_time[:-1]) * 60) + 'T'
+agg_dict = {
+                'open': 'first',
+                'high': 'max',
+                'low': 'min',
+                'close': 'last',
+                'volume': 'sum',
+                'quote_volume': 'sum',
+                'num': 'sum',
+                'initiative_vol': 'sum',
+                'initiative_quote_vol': 'sum'
+
+            }
 
 # =需要抓取的币种
 symbol_config = {}
@@ -91,11 +104,15 @@ def main():
     for symbol in symbol_config.keys():
         print('抓取历史数据：', symbol_config[symbol]['instrument_id'], min_time_interval)
         # 获取币种的历史数据，会删除最新一行的数据
-        df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_id'], symbol_config[symbol]['instrument_id'], time_interval, max_len=max_len)
+        df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_type'], symbol_config[symbol]['instrument_id'], min_time_interval, max_len=max_len)
         # 存储数据到本地
-        # df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), index=False)
-        # time.sleep(medium_sleep_time)  # 短暂的sleep
-
+        df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, min_time_interval)), index=False)
+        time.sleep(medium_sleep_time)  # 短暂的sleep
+        df_copy = df.copy()
+        for interval in time_interval_list[1:]:
+            interval_re = interval.replace('m', 'T') if 'm' in interval else str(int(interval[:-1]) * 60) + 'T'
+            df_tmp = df_copy.resample(rule=interval_re, offset=offset_time_re, on='candle_begin_time_GMT8', closed='left', label='left').agg(agg_dict).reset_index()
+            df_tmp.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, interval)), index=False)
     # for time_interval in time_interval_list:
 
 
@@ -122,14 +139,6 @@ def main():
         # runtime 16：15
 
         # =转换数据周期，并且存储数据
-        # 需要保存的数据
-        agg_dict = {
-            'open': 'first',
-            'high': 'max',
-            'low': 'min',
-            'close': 'last',
-            'volume': 'sum',
-        }
         # 遍历所有需要转换的周期
         for time_interval in need_save_list:
             # 遍历所有需要转换的币种
@@ -188,10 +197,10 @@ def main():
 
 if __name__ == '__main__':
     while True:
-        try:
+        # try:
             main()
-        except Exception as e:
-            send_dingding_msg('系统出错，10s之后重新运行，出错原因：' + str(e))
-            print(e)
-            sleep(long_sleep_time)
+        # except Exception as e:
+        #     send_dingding_msg('系统出错，10s之后重新运行，出错原因：' + str(e))
+        #     print(e)
+        #     sleep(long_sleep_time)
 

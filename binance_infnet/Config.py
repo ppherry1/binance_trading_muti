@@ -76,16 +76,16 @@ symbol_config_dict = {
     'main': {
         'symbol_config':
             {
-                'BTC-USDT': {
-                    'instrument_id': 'BTC-USDT',  # 现货币对，-前是交易币，-后是计价币
+                'BTCUSDT': {
+                    'instrument_id': 'BTCUSDT',  # 现货币对，-前是交易币，-后是计价币
                     'instrument_type': 'spot',
                     'strategy_name': 'real_tomato_net',  # 定投策略
                     'base_invest_val': 1.0,  # 以计价货币计的基础定投额
                     'invested_times': 0,  # 策略开始时的已投资次数，请准确设定，否则会导致意外交易（不涉及投资次数的策略可随意设）
                     'para': [800],
                 },
-                'ETH-USDT': {
-                    'instrument_id': 'ETH-USDT',  # 现货币对，-前是交易币，-后是计价币
+                'ETHUSDT': {
+                    'instrument_id': 'ETHUSDT',  # 现货币对，-前是交易币，-后是计价币
                     'instrument_type': 'spot',
                     'strategy_name': 'real_tomato_net',  # 定投策略
                     'base_invest_val': 1.0,  # 以计价货币计的基础定投额
