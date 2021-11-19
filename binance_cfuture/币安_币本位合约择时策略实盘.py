@@ -7,12 +7,18 @@ import pandas as pd
 import ccxt
 from binance_cfuture.Config import *
 from binance_cfuture.Function import *
+import sys
+import os
 
 pd.set_option('display.max_rows', 1000)
 pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
 pd.set_option('display.unicode.ambiguous_as_wide', True)  # 设置命令行输出时的列对齐功能
 pd.set_option('display.unicode.east_asian_width', True)
-
+# =====常规config信息
+# 获取项目根目录
+_ = os.path.abspath(os.path.dirname(__file__))  # 返回当前文件路径
+root_path = os.path.abspath(os.path.join(_, '.'))  # 返回根目录文件夹
+data_save_dir = os.path.join(root_path, 'data', 'binance_trading_data')
 
 # ==========配置运行相关参数==========
 # =交易模式设置
@@ -22,6 +28,39 @@ deal_adl = False  #
 # =k线周期
 time_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所支持的K线才行。最好不要低于5m
 
+exec_interval = '1h'  # 目前支持m（分钟），h（小时）为单位。必须是time_interval的正整数倍，且换算为分钟必须能整除1440，或被1440整除。
+# 以下是所有exec_interval的可取值
+# 1m, 2m, 3m, 4m, 5m, 6m, 8m, 10m, 12m, 15m, 16m, 18m, 20m, 24m, 30m, 32m, 36m, 40m, 45m, 48m, 1h,
+# 72m, 80m, 90m, 96m, 2h, 144m, 160m, 3h, 4h, 6h, 12h, 24h以及24h的整数倍。
+# k线偏移的时间
+offset_time = '-5m'  # 目前支持m（分钟），h（小时）为单位。必须是time_interval的整数倍。负数为提前执行，正数为延后执行。
+# 每个周期用来计算信号K线的条数，建议至少是策略窗口参数的两倍
+
+if time_interval.endswith('h'):
+    time_interval_re = str(int(time_interval[:-1]) * 60) + 'm'
+if exec_interval.endswith('h'):
+    exec_interval_re = str(int(exec_interval[:-1]) * 60) + 'm'
+if offset_time.endswith('h'):
+    offset_time_re = str(int(offset_time[:-1]) * 60) + 'm'
+
+# ===读取程序运行所需的子账号相关参数
+if len(sys.argv) > 1:
+    account_name = sys.argv[1]
+else:
+    print('未指定account_name参数，程序exit')
+    exit()
+print('子账户id：', account_name)
+
+# ===配置运行相关参数
+# =从config中读取相关配置信息
+exchange = ccxt.binance(BINANCE_CONFIG_dict[account_name])
+symbol_config = symbol_config_dict[account_name]['symbol_config']
+print('交易信息：', symbol_config)
+# =执行的时间间隔
+time_interval = symbol_config_dict[account_name]['time_interval']
+print('时间周期：', time_interval)
+
+
 # 设置初始资金来源相关参数
 funding_config = {
     'funding_from_spot': True,  # 从现货中直接提取交易币种作为保证金，这里选True。注意！如果现货不足，则本参数会自动转为False，也就是直接买现货。
@@ -30,43 +69,6 @@ funding_config = {
     'execute_amount': 20,  # 每次建仓的美元价值，BTC最小为200，其他币最小为20。
     'fee_use_bnb': True  # 使用BNB支付手续费
 }
-
-
-# =交易所配置
-BINANCE_CONFIG = {
-    'apiKey': 'A3sgiz5hLZ2vGn3uYMm43pFzrrkSCsXR2cPTmZ801MG20Bz91Bve8UuxI6iPLPLj',
-    'secret': 'OhLkUu99HDKqOhujQEqDvp0Yqi049z5qGe3RqaapGQfWEo91VoR6w5xwd4Tpq2GC',
-    'timeout': exchange_timeout,
-    'rateLimit': 10,
-    'verbose': False,
-    'hostname': 'fapi.binance.com',
-    'enableRateLimit': False}
-exchange = ccxt.binance(BINANCE_CONFIG)  # 交易所api
-
-# ==========配置策略相关参数==========
-# =symbol_config，更新需要交易的合约、策略参数、下单量等配置信息。
-# 本程序同时适用币本位的永续合约、交割合约。在symbol_config中设置不同的symbol即可，例如比特币永续为BTCUSD_PERP，交割为BTCUSD_210625。
-# 往每个币种的账户里面放不同的钱，就代表了每个币种的仓位
-symbol_config = {
-    'DOGEUSD_PERP': {'leverage': 1.5,
-                     'strategy_name': 'real_signal_none',  # 使用的策略的名称
-                     'para': [100, 1.6],  # 参数
-                     'initial_funds': True,  # 这里填True，则运行时按照下面所设置的initial_usd进行到等值套保状态，如有多余的币会转到现货账户，币不足的话则会购买
-                     # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
-                     # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
-                     # 如果监测到合约账户币种保证金为0，将进行强制初始化
-                     'initial_usd_funds': 40,  # u模式初始投入的资金美元价值initial_usd
-                     '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
-                     },
-    # 'BNBUSD_PERP': {'leverage': 1.5,
-    #                 'strategy_name': 'real_signal_simple_bolling_we',
-    #                 'para': [100, 1.7],
-    #                 'initial_funds': True,
-    #                 'initial_usd_funds': 20,
-    #                 '币模式保证金': 10,
-    #                 },
-}
-
 
 # =获取交易精度
 coin_future_exchange_info(exchange, symbol_config)
@@ -80,9 +82,9 @@ def main():
 
     # ==========获取需要交易币种的历史数据==========
     # 获取数据
-    max_candle_num = 5  # 每次获取的K线数量
-    symbol_candle_data = get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval,
-                                                                     max_candle_num, if_print=True)
+    # max_candle_num = 5  # 每次获取的K线数量
+    # symbol_candle_data = get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval_re,
+    #                                                                  max_candle_num, if_print=True)
     trading_initialization(exchange, funding_config, symbol_config)
     # =进入每次的循环
     while True:
@@ -96,22 +98,29 @@ def main():
         print('\nsymbol_info:\n', symbol_info, '\n')
 
         # ==========根据当前时间，获取策略下次执行时间，例如16:15。并sleep至该时间==========
-        run_time = sleep_until_run_time(time_interval, if_sleep=False)
+        run_time = sleep_until_run_time(exec_interval_re, if_sleep=False, offset_time=offset_time_re)
 
         # ==========获取最新的k线数据==========
-        exchange.timeout = 1000  # 即将获取最新数据，临时将timeout设置为1s，加快获取数据速度
-        # 获取数据
-        recent_candle_num = 5
-        recent_candle_data = single_thread_get_binance_coin_future_candle_data(exchange, symbol_config, symbol_info,
-                                                                               time_interval, run_time,
-                                                                               recent_candle_num)
-        # 将最近的数据打印出
+
+        symbol_candle_data = {}
         for symbol in symbol_config.keys():
-            print(recent_candle_data[symbol].tail(min(2, recent_candle_num)))
+            p = os.path.join(data_save_dir,
+                             'data_ready_%s_%s_%s' % (symbol, time_interval, str(run_time).replace(':', '-')))
+            print('获取数据地址：', p)
+            while True:
+                if os.path.exists(p):
+                    print('数据已经存在：', datetime.now())
+                    break
+                if datetime.now() > run_time + timedelta(minutes=1):
+                    print('时间超过1分钟，放弃从文件读取数据，返回空数据')
+                    break
+            symbol_candle_data[symbol] = pd.read_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)))
+            symbol_info.loc[symbol, '信号价格'] = symbol_candle_data[symbol].iloc[-1]['close']  # 该品种的最新价格
+            print(symbol_candle_data[symbol].tail(5))
 
         # 将symbol_candle_data和最新获取的recent_candle_data数据合并
-        symbol_candle_data = symbol_candle_data_append_recent_candle_data(symbol_candle_data, recent_candle_data,
-                                                                          symbol_config, max_candle_num)
+        # symbol_candle_data = symbol_candle_data_append_recent_candle_data(symbol_candle_data, recent_candle_data,
+        #                                                                   symbol_config, max_candle_num)
 
         # ==========计算每个币种的交易信号==========
         symbol_signal = calculate_signal(symbol_info, symbol_config, symbol_candle_data, mode)
