@@ -140,7 +140,7 @@ def ccxt_fetch_candle_data(exchange, ins_type, symbol, time_interval, limit, max
             df['candle_begin_time'] = pd.to_datetime(df['MTS'], unit='ms')
             df['candle_begin_time_GMT8'] = df['candle_begin_time'] + timedelta(hours=8)
             df = df[['candle_begin_time_GMT8', 'open', 'high', 'low', 'close',
-                     'volume', 'quote_volume', 'initiative_vol', 'initiative_quote_vol']].copy()
+                     'volume', 'quote_volume', 'num', 'initiative_vol', 'initiative_quote_vol']].copy()
             return df
         except Exception as e:
             print('获取fetch_ohlcv获取合约K线数据，失败，稍后重试。失败原因：\n', e)
