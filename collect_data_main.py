@@ -123,7 +123,7 @@ def main():
         # 获取run_time
         run_time = next_run_time(min_time_interval, ahead_seconds=1)
         # 计算本周期需要保存的数据周期。在sleep之前计算是为了节省后面的时间
-        need_save_list = cal_need_save_time_interval_this_run_time(run_time, time_interval_list)
+        need_save_list = cal_need_save_time_interval_this_run_time(run_time, time_interval_list, offset_time_re)
         # sleep
         time.sleep(max(0, (run_time - datetime.now()).seconds))
         while True:  # 在靠近目标时间时
