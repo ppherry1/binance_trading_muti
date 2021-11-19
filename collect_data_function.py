@@ -416,7 +416,7 @@ def next_run_time(time_interval, ahead_seconds=5):
 
 
 # ===计算本周期，需要保存哪些周期的数据
-def cal_need_save_time_interval_this_run_time(run_time, time_interval_list):
+def cal_need_save_time_interval_this_run_time(run_time, time_interval_list, offset_time_re='0m'):
     """
     根据run_time与time_interval_list，计算本周期哪些数据需要被更新。
     例如当time_interval_list是['5m', '15m', '30m', '1h', '2h']时，
@@ -431,6 +431,8 @@ def cal_need_save_time_interval_this_run_time(run_time, time_interval_list):
     :return:
     """
     need_save_list = []
+    offset_time_re = int(offset_time_re[:-1])
+    run_time = run_time - timedelta(minutes=offset_time_re)
     minute = run_time.minute
     hour = run_time.hour
     for time_interval in time_interval_list:

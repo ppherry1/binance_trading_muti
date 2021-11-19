@@ -152,7 +152,7 @@ def main():
                     else:
                         rule = time_interval
                     # 转化周期
-                    df = recent_candle_data[symbol].resample(rule=rule, on='candle_begin_time_GMT8').agg(agg_dict)
+                    df = recent_candle_data[symbol].resample(rule=rule, offset_time=offset_time_re, on='candle_begin_time_GMT8').agg(agg_dict).reset_index()
                     # 保存最后一行数据，保留index
                     df.iloc[-1:, :].to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), mode='a', header=None)
                 else:  # 不需要转换的数据周期：等于最小时间周期
@@ -175,7 +175,7 @@ def main():
                 for symbol in symbol_config.keys():
                     print('抓取历史数据：', symbol_config[symbol]['instrument_id'], time_interval)
                     # 获取币种的历史数据，会删除最新一行的数据
-                    df = fetch_okex_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_id'],
+                    df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_id'],
                                                                time_interval, max_len=max_len)
                     # 存储数据到本地
                     df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), index=False)
