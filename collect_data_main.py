@@ -171,15 +171,22 @@ def main():
             print('sleep 3min后，开始重新抓取历史数据...')
             time.sleep(3*60)
             # 遍历获取币种历史数据
-            for time_interval in time_interval_list:
-                for symbol in symbol_config.keys():
-                    print('抓取历史数据：', symbol_config[symbol]['instrument_id'], time_interval)
-                    # 获取币种的历史数据，会删除最新一行的数据
-                    df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_id'],
-                                                               time_interval, max_len=max_len)
-                    # 存储数据到本地
-                    df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), index=False)
-                    time.sleep(medium_sleep_time)  # 短暂的sleep
+            for symbol in symbol_config.keys():
+                print('抓取历史数据：', symbol_config[symbol]['instrument_id'], min_time_interval)
+                # 获取币种的历史数据，会删除最新一行的数据
+                df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_type'],
+                                                              symbol_config[symbol]['instrument_id'], min_time_interval,
+                                                              max_len=max_len)
+                # 存储数据到本地
+                df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, min_time_interval)), index=False)
+                time.sleep(medium_sleep_time)  # 短暂的sleep
+                df_copy = df.copy()
+                for interval in time_interval_list[1:]:
+                    interval_re = interval.replace('m', 'T') if 'm' in interval else str(int(interval[:-1]) * 60) + 'T'
+                    df_tmp = df_copy.resample(rule=interval_re, offset=offset_time_re, on='candle_begin_time_GMT8',
+                                              closed='left', label='left').agg(agg_dict).reset_index()
+                    df_tmp.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, interval)), index=False)
+                time.sleep(medium_sleep_time)  # 短暂的sleep
 
         # =每隔一段时间，清除一下之前的data_ready文件：每周二的9点，删除所有data_ready文件
         if run_time.weekday() == 2 and run_time.hour == 9 and run_time.minute == 0:
