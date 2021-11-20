@@ -471,7 +471,7 @@ def fetch_binance_symbol_history_candle_data(exchange, ins_type, symbol, time_in
 
     # 计算开始和结束的时间
     end = now_milliseconds - time_segment
-    since = end - max_len * time_segment
+    since = end - int(max_len) * time_segment
 
     # 循环获取历史数据
     all_kline_data = []
@@ -480,9 +480,9 @@ def fetch_binance_symbol_history_candle_data(exchange, ins_type, symbol, time_in
         for i in range(max_try_amount):
             try:
                 if ins_type == 'spot':
-                    kline_data = exchange.publicGetKlines(params={'symbol': symbol, 'startTime': since, 'interval':time_interval})
+                    kline_data = exchange.publicGetKlines(params={'symbol': symbol, 'startTime': since, 'interval':time_interval, 'limit': min(1000, max_len)})
                 elif ins_type == 'cfuture':
-                    kline_data = exchange.dapiPublicGetKlines(params={'symbol': symbol, 'startTime': since, 'interval':time_interval})
+                    kline_data = exchange.dapiPublicGetKlines(params={'symbol': symbol, 'startTime': since, 'interval':time_interval, 'limit':  min(1500, max_len)})
                 break
             except Exception as e:
                 print(e)
