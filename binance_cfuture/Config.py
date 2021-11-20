@@ -86,10 +86,11 @@ symbol_config_dict = {
         'symbol_config':
             {
                 'DOGEUSD_PERP': {'instrument_id': 'DOGEUSD_PERP',
-                                 'instrument_type': 'cfuture',
-                                 'leverage': 1.5,
-                                 'strategy_name': 'real_signal_none',  # 使用的策略的名称
-                                 'para': [100, 1.6],  # 参数
+                                 'instrument_type': 'spot',  # 使用K线的类型，现货'spot', 币本位合约'cfuture', u本位'ufuture'
+                                  # 这里合约也可以填spot，即用现货K线模拟合约K线，如果参数需求K线数大于70，建议填spot
+                                 'leverage': 1,
+                                 'strategy_name': 'real_signal_random',  # 使用的策略的名称
+                                 'para': [1],  # 参数
                                  'initial_funds': True,
                                  # 这里填True，则运行时按照下面所设置的initial_usd进行到等值套保状态，如有多余的币会转到现货账户，币不足的话则会购买
                                  # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
@@ -106,6 +107,6 @@ symbol_config_dict = {
                 #                 '币模式保证金': 10,
                 #                 },
             },
-        'time_interval' : '30m'
+        'time_interval': '15m'
     }
 }

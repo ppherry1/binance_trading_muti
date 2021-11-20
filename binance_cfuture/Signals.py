@@ -21,6 +21,18 @@ def real_signal_none(df, now_pos, avg_price, para):
 
     return None
 
+def real_signal_para(df, now_pos, avg_price, para):
+    """
+    发出空交易信号
+    :param df:
+    :param now_pos:
+    :param avg_price:
+    :param para:
+    :return:
+    """
+
+    return para[0]
+
 
 # 随机生成交易信号
 def real_signal_random(df, now_pos, avg_price, para):
@@ -34,11 +46,11 @@ def real_signal_random(df, now_pos, avg_price, para):
     """
 
     r = random.random()
-    if r <= 0.25:
+    if r <= 0.2:
         return 1
-    elif r <= 0.5:
+    elif r <= 0.6:
         return 0
-    elif r <= 0.75:
+    elif r <= 0.7:
         return -1
     else:
         return None

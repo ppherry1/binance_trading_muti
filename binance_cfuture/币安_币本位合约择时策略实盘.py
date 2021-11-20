@@ -17,31 +17,13 @@ pd.set_option('display.unicode.east_asian_width', True)
 # =====常规config信息
 # 获取项目根目录
 _ = os.path.abspath(os.path.dirname(__file__))  # 返回当前文件路径
-root_path = os.path.abspath(os.path.join(_, '.'))  # 返回根目录文件夹
+root_path = os.path.abspath(os.path.join(_, '..'))  # 返回根目录文件夹
 data_save_dir = os.path.join(root_path, 'data', 'binance_trading_data')
 
 # ==========配置运行相关参数==========
 # =交易模式设置
 mode = 'u模式'  # u模式，币模式
 deal_adl = False  #
-
-# =k线周期
-time_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所支持的K线才行。最好不要低于5m
-
-exec_interval = '1h'  # 目前支持m（分钟），h（小时）为单位。必须是time_interval的正整数倍，且换算为分钟必须能整除1440，或被1440整除。
-# 以下是所有exec_interval的可取值
-# 1m, 2m, 3m, 4m, 5m, 6m, 8m, 10m, 12m, 15m, 16m, 18m, 20m, 24m, 30m, 32m, 36m, 40m, 45m, 48m, 1h,
-# 72m, 80m, 90m, 96m, 2h, 144m, 160m, 3h, 4h, 6h, 12h, 24h以及24h的整数倍。
-# k线偏移的时间
-offset_time = '-5m'  # 目前支持m（分钟），h（小时）为单位。必须是time_interval的整数倍。负数为提前执行，正数为延后执行。
-# 每个周期用来计算信号K线的条数，建议至少是策略窗口参数的两倍
-
-if time_interval.endswith('h'):
-    time_interval_re = str(int(time_interval[:-1]) * 60) + 'm'
-if exec_interval.endswith('h'):
-    exec_interval_re = str(int(exec_interval[:-1]) * 60) + 'm'
-if offset_time.endswith('h'):
-    offset_time_re = str(int(offset_time[:-1]) * 60) + 'm'
 
 # ===读取程序运行所需的子账号相关参数
 if len(sys.argv) > 1:
@@ -57,8 +39,24 @@ exchange = ccxt.binance(BINANCE_CONFIG_dict[account_name])
 symbol_config = symbol_config_dict[account_name]['symbol_config']
 print('交易信息：', symbol_config)
 # =执行的时间间隔
-time_interval = symbol_config_dict[account_name]['time_interval']
-print('时间周期：', time_interval)
+exec_interval = symbol_config_dict[account_name]['time_interval']
+
+# =k线周期
+time_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所支持的K线才行。最好不要低于5m
+
+# exec_interval = '1h'  # 目前支持m（分钟），h（小时）为单位。必须是time_interval的正整数倍，且换算为分钟必须能整除1440，或被1440整除。
+# 以下是所有exec_interval的可取值
+# 1m, 2m, 3m, 4m, 5m, 6m, 8m, 10m, 12m, 15m, 16m, 18m, 20m, 24m, 30m, 32m, 36m, 40m, 45m, 48m, 1h,
+# 72m, 80m, 90m, 96m, 2h, 144m, 160m, 3h, 4h, 6h, 12h, 24h以及24h的整数倍。
+# k线偏移的时间
+offset_time = '-5m'  # 目前支持m（分钟），h（小时）为单位。必须是time_interval的整数倍。负数为提前执行，正数为延后执行。
+# 每个周期用来计算信号K线的条数，建议至少是策略窗口参数的两倍
+
+time_interval_re = str(int(time_interval[:-1]) * 60) + 'm' if time_interval.endswith('h') else time_interval
+exec_interval_re = str(int(exec_interval[:-1]) * 60) + 'm' if exec_interval.endswith('h') else exec_interval
+offset_time_re = str(int(offset_time[:-1]) * 60) + 'm' if offset_time.endswith('h') else offset_time
+
+print('执行时间周期：', exec_interval, ',底层K线周期：', time_interval, '每执行周期偏移时间量：', offset_time)
 
 
 # 设置初始资金来源相关参数
@@ -99,13 +97,12 @@ def main():
 
         # ==========根据当前时间，获取策略下次执行时间，例如16:15。并sleep至该时间==========
         run_time = sleep_until_run_time(exec_interval_re, if_sleep=False, offset_time=offset_time_re)
-
         # ==========获取最新的k线数据==========
 
         symbol_candle_data = {}
         for symbol in symbol_config.keys():
             p = os.path.join(data_save_dir,
-                             'data_ready_%s_%s_%s' % (symbol, time_interval, str(run_time).replace(':', '-')))
+                             'data_ready_%s_%s_%s' % (symbol, exec_interval, str(run_time).replace(':', '-')))
             print('获取数据地址：', p)
             while True:
                 if os.path.exists(p):
@@ -114,8 +111,8 @@ def main():
                 if datetime.now() > run_time + timedelta(minutes=1):
                     print('时间超过1分钟，放弃从文件读取数据，返回空数据')
                     break
-            symbol_candle_data[symbol] = pd.read_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)))
-            symbol_info.loc[symbol, '信号价格'] = symbol_candle_data[symbol].iloc[-1]['close']  # 该品种的最新价格
+            symbol_candle_data[symbol] = pd.read_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, exec_interval)))
+            symbol_info.loc[symbol, '当前价格'] = symbol_candle_data[symbol].iloc[-1]['close']  # 该品种的最新价格
             print(symbol_candle_data[symbol].tail(5))
 
         # 将symbol_candle_data和最新获取的recent_candle_data数据合并
@@ -134,7 +131,7 @@ def main():
         print('\n订单参数\n', symbol_order_params)
 
         # 开始批量下单
-        # place_binance_cfuture_batch_order(exchange, symbol_order_params)
+        place_binance_cfuture_batch_order(exchange, symbol_order_params)
 
         # ==========检测是否需要adl==========
         time.sleep(medium_sleep_time)

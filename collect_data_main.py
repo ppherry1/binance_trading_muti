@@ -49,11 +49,14 @@ data_save_dir = os.path.join(root_path, 'data', 'binance_trading_data')
 #         time_interval_list.append(time_interval)
 deal_type = ['infnet', 'cfuture']
 time_interval_list = ['5m', '15m', '30m', '1h', '2h']
-offset_time = '-5m'
+offset_time = '-5m'  # 必须与deal_type的主程序offset_time一致
 min_time_interval = time_interval_list[0]
-candle_num = 30  # 每次获取K线的数量。必须保证candle_num的数量足够大，可以保证min_time_interval可以resample出最大的时间周期
+max_time_interval = time_interval_list[-1]
+
 print('需要抓取的时间周期：', time_interval_list)
 print('最小的时间周期是：', min_time_interval)  # 其他时间周期必须是最小时间周期的整数倍。
+min_time_interval_re = min_time_interval.replace('m', 'T') if 'm' in min_time_interval else str(int(min_time_interval[:-1]) * 60) + 'T'
+max_time_interval_re = max_time_interval.replace('m', 'T') if 'm' in max_time_interval else str(int(max_time_interval[:-1]) * 60) + 'T'
 
 offset_time_re = offset_time.replace('m', 'T') if 'm' in offset_time else str(int(offset_time[:-1]) * 60) + 'T'
 agg_dict = {
@@ -69,18 +72,6 @@ agg_dict = {
 
             }
 
-# =需要抓取的币种
-symbol_config = {}
-for strategy_type in deal_type:
-    for account_name in eval(strategy_type).symbol_config_dict.keys():
-        for symbol in eval(strategy_type).symbol_config_dict[account_name]['symbol_config']:
-            symbol_config[symbol] = {
-                'instrument_id': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_id'],
-                'instrument_type': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_type'] if 'instrument_type' in eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol].keys() else 'ufuture'
-            }
-print('需要抓取的币种：', symbol_config)
-# symbol_config更适合list，将symbol_config做成dict，只是为了和之前的程序兼容
-
 # =====其他配置信息
 # =exchange
 BINANCE_CONFIG = {
@@ -92,8 +83,34 @@ BINANCE_CONFIG = {
 }
 exchange = ccxt.binance(BINANCE_CONFIG)
 
-# =设定最多收集多少根K线，okex_v3不能超过1440根
-max_len = 500
+# =需要抓取的币种
+market_symbols = pd.DataFrame(exchange.publicGetExchangeInfo()['symbols'])['symbol'].to_list()
+symbol_config = {}
+for strategy_type in deal_type:
+    for account_name in eval(strategy_type).symbol_config_dict.keys():
+        for symbol in eval(strategy_type).symbol_config_dict[account_name]['symbol_config']:
+            symbol_config[symbol] = {
+                'instrument_id': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_id'],
+                # 'save_id': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_id'],
+                'instrument_type': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_type'] if 'instrument_type' in eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol].keys() else 'ufuture'
+            }
+            if symbol_config[symbol]['instrument_type'] == 'spot':
+                if symbol_config[symbol]['instrument_id'] not in market_symbols:
+                    if symbol_config[symbol]['instrument_id'].find('USD') != -1:
+                        symbol_config[symbol]['instrument_id'] = symbol_config[symbol]['instrument_id'][:symbol_config[symbol]['instrument_id'].find('USD')] + 'USDT'
+                        if symbol_config[symbol]['instrument_id'] not in market_symbols:
+                            raise Exception
+                    else:
+                        raise Exception
+print('需要抓取的币种：', symbol_config)
+# symbol_config更适合list，将symbol_config做成dict，只是为了和之前的程序兼容
+
+
+
+ever_max_len = 500  # 程序开始时一次性收集的根数
+max_num = int((ever_max_len + 1) * int(max_time_interval_re[:-1]) / int(min_time_interval_re[:-1]))
+ever_len = 3  # 每次获取K线的数量，每个周期的实际根数，不需要考虑resample，建议填3
+ever_num = int((ever_len + 1) * int(max_time_interval_re[:-1]) / int(min_time_interval_re[:-1]))
 
 
 def main():
@@ -104,15 +121,16 @@ def main():
     for symbol in symbol_config.keys():
         print('抓取历史数据：', symbol_config[symbol]['instrument_id'], min_time_interval)
         # 获取币种的历史数据，会删除最新一行的数据
-        df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_type'], symbol_config[symbol]['instrument_id'], min_time_interval, max_len=max_len)
+        df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_type'], symbol_config[symbol]['instrument_id'], min_time_interval, max_len=max_num)
         # 存储数据到本地
-        df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, min_time_interval)), index=False)
+        df.iloc[-ever_max_len:, :].to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, min_time_interval)), index=False)
         time.sleep(medium_sleep_time)  # 短暂的sleep
         df_copy = df.copy()
         for interval in time_interval_list[1:]:
             interval_re = interval.replace('m', 'T') if 'm' in interval else str(int(interval[:-1]) * 60) + 'T'
             df_tmp = df_copy.resample(rule=interval_re, offset=offset_time_re, on='candle_begin_time_GMT8', closed='left', label='left').agg(agg_dict).reset_index()
-            df_tmp.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, interval)), index=False)
+            df_tmp.iloc[-ever_max_len + 1:, :].to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, interval)), index=False)
+
     # for time_interval in time_interval_list:
 
 
@@ -132,7 +150,7 @@ def main():
 
         # =获取所有币种最近数据
         # 串行获取数据，和单账户程序相比，只是去除了symbol_info
-        recent_candle_data = single_threading_get_data(exchange, symbol_config, min_time_interval, run_time, candle_num)
+        recent_candle_data = single_threading_get_data(exchange, symbol_config, min_time_interval, run_time, ever_num)
         for symbol in symbol_config.keys():
             print('\n', recent_candle_data[symbol].tail(2))
 
@@ -154,11 +172,22 @@ def main():
                     # 转化周期
                     df = recent_candle_data[symbol].resample(rule=rule, offset=offset_time_re, on='candle_begin_time_GMT8').agg(agg_dict).reset_index()
                     # 保存最后一行数据，保留index
-                    df.iloc[-1:, :].to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), mode='a', header=None)
+                    df_bf = pd.read_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)))
+                    df = df.iloc[-ever_len + 1:, :]
+                    df = pd.concat([df_bf, df])
+                    df['DATETIME'] = df['candle_begin_time_GMT8'].astype(str)
+                    df.drop_duplicates(subset='DATETIME', inplace=True, keep='last')
+                    df.drop(['DATETIME'], axis=1, inplace=True)
+                    df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), index=False)
                 else:  # 不需要转换的数据周期：等于最小时间周期
                     # 保存数据，不需要index
-                    df.iloc[-1:, :].to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), mode='a', index=False, header=None)
-
+                    df_bf = pd.read_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)))
+                    df = df.iloc[-ever_len + 1:, :]
+                    df = pd.concat([df_bf, df])
+                    df['DATETIME'] = df['candle_begin_time_GMT8'].astype(str)
+                    df.drop_duplicates(subset='DATETIME', inplace=True, keep='last')
+                    df.drop(['DATETIME'], axis=1, inplace=True)
+                    df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)), index=False)
                 # 输出data_ready
                 t = datetime.now()
                 pd.DataFrame(columns=[t]).to_csv(os.path.join(data_save_dir, 'data_ready_%s_%s_%s' % (symbol, time_interval, str(run_time).replace(':', '-'))), index=False)
@@ -176,16 +205,16 @@ def main():
                 # 获取币种的历史数据，会删除最新一行的数据
                 df = fetch_binance_symbol_history_candle_data(exchange, symbol_config[symbol]['instrument_type'],
                                                               symbol_config[symbol]['instrument_id'], min_time_interval,
-                                                              max_len=max_len)
+                                                              max_len=max_num)
                 # 存储数据到本地
-                df.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, min_time_interval)), index=False)
+                df.iloc[-ever_max_len:, :].to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, min_time_interval)), index=False)
                 time.sleep(medium_sleep_time)  # 短暂的sleep
                 df_copy = df.copy()
                 for interval in time_interval_list[1:]:
                     interval_re = interval.replace('m', 'T') if 'm' in interval else str(int(interval[:-1]) * 60) + 'T'
                     df_tmp = df_copy.resample(rule=interval_re, offset=offset_time_re, on='candle_begin_time_GMT8',
                                               closed='left', label='left').agg(agg_dict).reset_index()
-                    df_tmp.to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, interval)), index=False)
+                    df_tmp.iloc[-ever_max_len + 1:, :].to_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, interval)), index=False)
                 time.sleep(medium_sleep_time)  # 短暂的sleep
 
         # =每隔一段时间，清除一下之前的data_ready文件：每周二的9点，删除所有data_ready文件
