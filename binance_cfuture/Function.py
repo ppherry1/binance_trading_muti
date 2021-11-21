@@ -1,14 +1,18 @@
-"""
-邢不行2021策略分享会
-微信：xbx2626
-币安币本位择时策略框架
-"""
+
+from binance_cfuture import Signals
+from binance_cfuture.Config import *
+import ccxt
 import math
 import pandas as pd
 from datetime import datetime, timedelta
+import json
+import requests
 import time
-from binance_cfuture import Signals
-from binance_cfuture.Config import *
+import hmac
+import hashlib
+import base64
+from urllib import parse
+
 
 pd.set_option('display.max_rows', 1000)
 pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
@@ -414,14 +418,17 @@ def binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode):
 # ===批量下单
 def place_binance_cfuture_batch_order(exchange, symbol_order_params):
     num = 5  # 每个批量最多下单的数量
+    order_info_list = []
     for i in range(0, len(symbol_order_params), num):
         order_list = symbol_order_params[i:i + num]
         params = {'batchOrders': exchange.json(order_list),
                   'timestamp': int(time.time() * 1000)}
         order_info = retry_wrapper(exchange.dapiPrivatePostBatchOrders, params=params, act_name='批量下单')
-
+        order_info = pd.DataFrame(order_info)
+        order_info_list.append(order_info)
         print('\n成交订单信息\n', order_info)
         time.sleep(short_sleep_time)
+        return order_info_list
 
 
 # ==========趋势策略相关函数==========
@@ -889,3 +896,81 @@ def binance_account_transfer(exchange, currency, amount, from_account='币币', 
 
     print('转账报错次数过多，程序终止')
     exit()
+
+# ===发送钉钉相关函数
+# 计算钉钉时间戳
+def cal_timestamp_sign(secret):
+    # 根据钉钉开发文档，修改推送消息的安全设置https://ding-doc.dingtalk.com/doc#/serverapi2/qf2nxq
+    # 也就是根据这个方法，不只是要有robot_id，还要有secret
+    # 当前时间戳，单位是毫秒，与请求调用时间误差不能超过1小时
+    # python3用int取整
+    timestamp = int(round(time.time() * 1000))
+    # 密钥，机器人安全设置页面，加签一栏下面显示的SEC开头的字符串
+    secret_enc = bytes(secret.encode('utf-8'))
+    string_to_sign = '{}\n{}'.format(timestamp, secret)
+    string_to_sign_enc = bytes(string_to_sign.encode('utf-8'))
+    hmac_code = hmac.new(secret_enc, string_to_sign_enc, digestmod=hashlib.sha256).digest()
+    # 得到最终的签名值
+    sign = parse.quote_plus(base64.b64encode(hmac_code))
+    return str(timestamp), str(sign)
+
+
+# 发送钉钉消息
+def send_dingding_msg(content, robot_id='0994377c176bf8be7eac6404f081fd69279b8a5407a1d5764168024e10a00217',
+                      secret='SEC3e297e1c2d94e7a050152fef0097a1b4d2a1e9890a2e3feec0a11433346511c0'):
+    """
+    :param content:
+    :param robot_id:  你的access_token，即webhook地址中那段access_token。例如如下地址：https://oapi.dingtalk.com/robot/
+n    :param secret: 你的secret，即安全设置加签当中的那个密钥
+    :return:
+    """
+    try:
+        msg = {
+            "msgtype": "text",
+            "text": {"content": content + '\n' + datetime.now().strftime("%m-%d %H:%M:%S")}}
+        headers = {"Content-Type": "application/json;charset=utf-8"}
+        # https://oapi.dingtalk.com/robot/send?access_token=XXXXXX&timestamp=XXX&sign=XXX
+        timestamp, sign_str = cal_timestamp_sign(secret)
+        url = 'https://oapi.dingtalk.com/robot/send?access_token=' + robot_id + \
+              '&timestamp=' + timestamp + '&sign=' + sign_str
+        body = json.dumps(msg)
+        requests.post(url, data=body, headers=headers, timeout=10)
+        print('成功发送钉钉')
+    except Exception as e:
+        print("发送钉钉失败:", e)
+
+
+# price 价格 money 资金量 leverage 杠杆 ratio 最小变动单位
+def calculate_max_size(price, money, leverage, ratio):
+    return math.floor(money * leverage / price / ratio)
+
+
+def send_dingding_and_raise_error(content):
+    print(content)
+    send_dingding_msg(content)
+    raise ValueError(content)
+
+
+def dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_time, robot_id_secret):
+    """
+    :param symbol_info:
+    :param symbol_signal:
+    :param symbol_order:
+    :param run_time:
+    :param robot_id_secret:
+    :return:
+    """
+    content = ''
+
+    # 订单信息
+    if symbol_signal:
+        symbol_order_str = ['\n\n' + y.to_string() for x, y in symbol_order.iterrows()]  # 持仓信息
+        content += '# =====订单信息' + ''.join(symbol_order_str) + '\n\n'
+
+    # 持仓信息
+    symbol_info_str = ['\n\n' + str(x) + '\n' + y.to_string() for x, y in symbol_info.iterrows()]
+    content += '# =====持仓信息' + ''.join(symbol_info_str) + '\n\n'
+
+    # 发送，每间隔30分钟或者有交易的时候，发送一次
+    if run_time.minute % 30 == 0 or symbol_signal:
+        send_dingding_msg(content, robot_id=robot_id_secret[0], secret=robot_id_secret[1])

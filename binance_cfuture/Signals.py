@@ -1,8 +1,4 @@
-"""
-邢不行2021策略分享会
-微信：xbx2626
-币安币本位择时策略框架
-"""
+
 import pandas as pd
 import random
 import talib as ta
