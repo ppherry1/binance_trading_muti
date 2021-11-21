@@ -48,12 +48,12 @@ api_dict = {
             'secret': 'OhLkUu99HDKqOhujQEqDvp0Yqi049z5qGe3RqaapGQfWEo91VoR6w5xwd4Tpq2GC',
     },
     'son2': {
-        'apiKey': "159f77be-",
-        'secret': "",
+        'apiKey': "mYpuRg1IsYCBO52k9KMvLHEx7hUQcMpMKrLyrXuILPsVAP7ZKaNkDTWXIaiTuLMU",
+        'secret': "u89HSIXXEx3BbItro2RJFBuXI4ZZ5zmYxM36HGINWuD3ZP4ayy8y7uXFEMSfbOvM",
     },
     'son3': {
-        'apiKey': "53dba3e5-",
-        'secret': "",
+        'apiKey': "uYWLRAPf8iXYDGfOzm5wR6w35uvn6PQWONzxZpe46FUDKLCQrZo3C5lK7HqchyIQ",
+        'secret': "fDVklkFaCL36TR1ryjpaR4jZanDfbVwRpW545QUdFJvD1BIXrIPbGpKsABq0mhDa",
     },
     # 'son4': {
     #     'apiKey': "56739d25-",
