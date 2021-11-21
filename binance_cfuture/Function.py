@@ -428,7 +428,7 @@ def place_binance_cfuture_batch_order(exchange, symbol_order_params):
         order_info_list.append(order_info)
         print('\n成交订单信息\n', order_info)
         time.sleep(short_sleep_time)
-        return order_info_list
+    return order_info_list
 
 
 # ==========趋势策略相关函数==========
@@ -624,11 +624,15 @@ def trading_initialization(exchange, funding_config, symbol_config):
         df_balance = pd.DataFrame(exchange.dapiPrivateGetBalance())
         symbol_balance = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'balance'].values[0])
         symbol_withdraw = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'withdrawAvailable'].values[0])
-        if symbol_config[symbol]['initial_funds'] or symbol_balance - 0.000001 <= 0:
+        spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
+        symbol_usd_value = df_balance * spot_sell1_price
+        if symbol_config[symbol]['initial_funds'] or symbol_usd_value - 20.000001 <= 0:
+            if symbol_usd_value - 20.000001 <= 0:
+                print('margin is %f, under margined' % symbol_usd_value)
             # 如果保证金为0，将强制初始化
             symbol_spot_qr = symbol_spot + funding_config['funding_coin'].upper()
             symbol_spot_tr = symbol_spot + funding_config['funding_coin'].upper()
-            spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
+
             future_num = symbol_config[symbol]['initial_usd_funds']/contract_size
             spot_amount = symbol_config[symbol]['initial_usd_funds'] / float(spot_sell1_price)
             df_position = pd.DataFrame(exchange.dapiPrivateGetPositionRisk())

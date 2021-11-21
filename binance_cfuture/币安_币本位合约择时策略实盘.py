@@ -97,12 +97,19 @@ def main():
 
         # 开始批量下单
         order_info_list = place_binance_cfuture_batch_order(exchange, symbol_order_params)
-        symbol_order = pd.concat(order_info_list)
+        if len(order_info_list) == 0:
+            symbol_order = pd.DataFrame()
+        else:
+            symbol_order = pd.concat(order_info_list)
 
         # ==========检测是否需要adl==========
         time.sleep(medium_sleep_time)
         if deal_adl:
             deal_with_binance_adl(exchange, symbol_info, symbol_config)
+        # 更新账户信息symbol_info
+        symbol_info = pd.DataFrame(index=symbol_config.keys(), columns=symbol_info_columns)
+        symbol_info = binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode)
+        print('\nsymbol_info:\n', symbol_info, '\n')
 
         # 发送钉钉
         dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_time, robot_id_secret)

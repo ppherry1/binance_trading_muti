@@ -218,7 +218,8 @@ def main():
                 time.sleep(medium_sleep_time)  # 短暂的sleep
 
         # =每隔一段时间，清除一下之前的data_ready文件：每周二的9点，删除所有data_ready文件
-        if run_time.weekday() == 2 and run_time.hour == 9 and run_time.minute == 0:
+        # run_time.weekday() == 2 and run_time.hour == 9 and
+        if run_time.minute == 0:
             print('sleep 1min后，开始删除data_ready文件...')
             time.sleep(60)
             file_list = glob.glob(data_save_dir + '/*')  # python自带的库，或者某文件夹中所有文件的路径
