@@ -624,15 +624,14 @@ def trading_initialization(exchange, funding_config, symbol_config):
         df_balance = pd.DataFrame(exchange.dapiPrivateGetBalance())
         symbol_balance = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'balance'].values[0])
         symbol_withdraw = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'withdrawAvailable'].values[0])
+        symbol_spot_qr = symbol_spot + funding_config['funding_coin'].upper()
+        symbol_spot_tr = symbol_spot + funding_config['funding_coin'].upper()
         spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
-        symbol_usd_value = df_balance * spot_sell1_price
+        symbol_usd_value = symbol_balance * float(spot_sell1_price)
         if symbol_config[symbol]['initial_funds'] or symbol_usd_value - 20.000001 <= 0:
             if symbol_usd_value - 20.000001 <= 0:
-                print('margin is %f, under margined' % symbol_usd_value)
+                print('%s币本位保证金%f个， 美元价值$%f，不足$20，强制初始化' % (symbol_spot,symbol_balance, symbol_usd_value))
             # 如果保证金为0，将强制初始化
-            symbol_spot_qr = symbol_spot + funding_config['funding_coin'].upper()
-            symbol_spot_tr = symbol_spot + funding_config['funding_coin'].upper()
-
             future_num = symbol_config[symbol]['initial_usd_funds']/contract_size
             spot_amount = symbol_config[symbol]['initial_usd_funds'] / float(spot_sell1_price)
             df_position = pd.DataFrame(exchange.dapiPrivateGetPositionRisk())
@@ -955,7 +954,7 @@ def send_dingding_and_raise_error(content):
     raise ValueError(content)
 
 
-def dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_time, robot_id_secret):
+def dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_time, robot_id_secret, account_name):
     """
     :param symbol_info:
     :param symbol_signal:
@@ -965,7 +964,7 @@ def dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_tim
     :return:
     """
     content = ''
-
+    content += '# =====账户：' + str(account_name) + '\n\n'
     # 订单信息
     if symbol_signal:
         symbol_order_str = ['\n\n' + y.to_string() for x, y in symbol_order.iterrows()]  # 持仓信息
@@ -976,5 +975,8 @@ def dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_tim
     content += '# =====持仓信息' + ''.join(symbol_info_str) + '\n\n'
 
     # 发送，每间隔30分钟或者有交易的时候，发送一次
-    if run_time.minute % 30 == 0 or symbol_signal:
+    if run_time.hour % 15 == 0 or symbol_signal:
+        if run_time.hour % 15 == 0 and len(symbol_signal) == 0:
+            content = '# ===本次为15时定时播报持仓周期,无交易===' + content + '\n\n'
+
         send_dingding_msg(content, robot_id=robot_id_secret[0], secret=robot_id_secret[1])

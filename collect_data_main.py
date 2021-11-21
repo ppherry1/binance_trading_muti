@@ -47,7 +47,10 @@ data_save_dir = os.path.join(root_path, 'data', 'binance_trading_data')
 #     time_interval = symbol_config_dict[account_name]['time_interval']
 #     if time_interval not in time_interval_list:
 #         time_interval_list.append(time_interval)
-deal_type = ['infnet', 'cfuture']
+deal_type = [
+    # 'infnet',
+             'cfuture'
+             ]
 time_interval_list = ['5m', '15m', '30m', '1h', '2h']
 offset_time = '-5m'  # 必须与deal_type的主程序offset_time一致
 min_time_interval = time_interval_list[0]

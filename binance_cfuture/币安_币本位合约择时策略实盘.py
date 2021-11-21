@@ -110,9 +110,10 @@ def main():
         symbol_info = pd.DataFrame(index=symbol_config.keys(), columns=symbol_info_columns)
         symbol_info = binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode)
         print('\nsymbol_info:\n', symbol_info, '\n')
+        print('\n############\n')
 
         # 发送钉钉
-        dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_time, robot_id_secret)
+        dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_time, robot_id_secret, account_name)
 
         # 本次循环结束
         print('\n', '-' * 20, '本次循环结束，%f秒后进入下一次循环' % long_sleep_time, '-' * 20, '\n\n')
