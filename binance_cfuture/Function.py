@@ -628,9 +628,9 @@ def trading_initialization(exchange, funding_config, symbol_config):
         symbol_spot_tr = symbol_spot + funding_config['funding_coin'].upper()
         spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
         symbol_usd_value = symbol_balance * float(spot_sell1_price)
-        if symbol_config[symbol]['initial_funds'] or symbol_usd_value - 20.000001 <= 0:
-            if symbol_usd_value - 20.000001 <= 0:
-                print('%s币本位保证金%f个， 美元价值$%f，不足$20，强制初始化' % (symbol_spot,symbol_balance, symbol_usd_value))
+        if symbol_config[symbol]['initial_funds'] or symbol_usd_value - 15.000001 <= 0:
+            if symbol_usd_value - 15.000001 <= 0:
+                print('%s币本位保证金%f个， 美元价值$%f，不足$15，强制初始化' % (symbol_spot,symbol_balance, symbol_usd_value))
             # 如果保证金为0，将强制初始化
             future_num = symbol_config[symbol]['initial_usd_funds']/contract_size
             spot_amount = symbol_config[symbol]['initial_usd_funds'] / float(spot_sell1_price)
@@ -659,7 +659,7 @@ def trading_initialization(exchange, funding_config, symbol_config):
                         binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=surplus_balance, from_account='合约',
                                                  to_account='币币')
                 elif int(position_amt) == -int(future_num):
-                    print('position_amt == -future_num,pass')
+                    print('%s 空头持仓量=预设建仓量，无需建仓！' % symbol)
                     pass
                 else:
                     # 如果已有空头仓位小于预设仓位，全部平空，保证金划转现货。
@@ -751,6 +751,10 @@ def trading_initialization(exchange, funding_config, symbol_config):
                         residue_num = residue_num - amount
                         if residue_num <= 0:
                             break
+
+            print('%s初始化完成！' % symbol)
+        else:
+            print('%s用户设置不进行初始化建仓，且账户保证金价值>$15，初始化完成！' % symbol)
     return True
 
 
