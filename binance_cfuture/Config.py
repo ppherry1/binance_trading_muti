@@ -28,7 +28,7 @@ funding_config = {
     'funding_from_spot': True,  # 从现货中直接提取交易币种作为保证金，这里选True。注意！如果现货不足，则本参数会自动转为False，也就是直接买现货。
     'funding_coin': 'USDT',  # 用于买入现货的交易币种，目前仅能填USD等价币，如USDT，BUSD
     'r_threshold': 0.0007,  # 建仓的最小期现差阈值,可设定为-1，则为忽略阈值，直接建仓
-    'execute_amount': 20,  # 每次建仓的美元价值，BTC最小为200，其他币最小为20。
+    'execute_amount': 30,  # 每次建仓的美元价值，BTC最小为200，其他币最小为20。
     'fee_use_bnb': True  # 使用BNB支付手续费
 }
 
@@ -105,7 +105,7 @@ symbol_config_dict = {
                                  # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
                                  # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
                                  # 如果监测到合约账户币种保证金为0，将进行强制初始化
-                                 'initial_usd_funds': 40,  # u模式初始投入的资金美元价值initial_usd
+                                 'initial_usd_funds': 60,  # u模式初始投入的资金美元价值initial_usd
                                  '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                                  },
                 # 'BNBUSD_PERP': {'leverage': 1.5,
@@ -198,10 +198,6 @@ offset_time = '-5m'  # 目前支持m（分钟），h（小时）为单位。必�
 
 # 设置初始资金来源相关参数
 funding_config = {
-    'funding_from_spot': True,  # 从现货中直接提取交易币种作为保证金，这里选True。注意！如果现货不足，则本参数会自动转为False，也就是直接买现货。
-    'funding_coin': 'USDT',  # 用于买入现货的交易币种，目前仅能填USD等价币，如USDT，BUSD
-    'r_threshold': 0.0005,  # 建仓的最小期现差阈值,可设定为-1，则为忽略阈值，直接建仓
-    'execute_amount': 20,  # 每次建仓的美元价值，BTC最小为200，其他币最小为20。
-    'fee_use_bnb': False  # 使用BNB支付手续费
+    'funding_coin': 'USDT',  # 若现货不足，用于买入现货的交易币种，目前仅能填USD等价币，如USDT，BUSD
 }
 
