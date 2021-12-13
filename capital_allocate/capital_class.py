@@ -1,13 +1,5 @@
-import time
-
-import navigator_updater.api.conda_api
-import pandas as pd
-from capital_allocate.wraps_func import *
-from functools import wraps, partial
+from trading_class.wraps_func import *
 from capital_allocate.capital_config import *
-import binance_cfuture.Config as cfuture
-import binance_hedge.Config as chedge
-import binance.Config as infnet
 from capital_allocate import capital_strategy
 
 

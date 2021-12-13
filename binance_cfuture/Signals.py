@@ -2,9 +2,11 @@
 import pandas as pd
 import random
 import talib as ta
+from wraps_func import *
 
 
 # 将None作为信号返回
+@record_signal
 def real_signal_none(df, now_pos, avg_price, para):
     """
     发出空交易信号
@@ -17,6 +19,7 @@ def real_signal_none(df, now_pos, avg_price, para):
 
     return None
 
+@record_signal
 def real_signal_para(df, now_pos, avg_price, para):
     """
     发出空交易信号
