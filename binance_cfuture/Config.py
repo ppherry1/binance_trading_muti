@@ -43,10 +43,10 @@ robot_id_secret = [robot_id, secret]
 # ===各个子账户的api配置
 # 手工输入每个子账户的api
 api_dict = {
-    'son1': {
-            'apiKey': 'A3sgiz5hLZ2vGn3uYMm43pFzrrkSCsXR2cPTmZ801MG20Bz91Bve8UuxI6iPLPLj',
-            'secret': 'OhLkUu99HDKqOhujQEqDvp0Yqi049z5qGe3RqaapGQfWEo91VoR6w5xwd4Tpq2GC',
-    },
+    # 'son1': {
+    #         'apiKey': 'A3sgiz5hLZ2vGn3uYMm43pFzrrkSCsXR2cPTmZ801MG20Bz91Bve8UuxI6iPLPLj',
+    #         'secret': 'OhLkUu99HDKqOhujQEqDvp0Yqi049z5qGe3RqaapGQfWEo91VoR6w5xwd4Tpq2GC',
+    # },
      'son2': {
         'apiKey': "mYpuRg1IsYCBO52k9KMvLHEx7hUQcMpMKrLyrXuILPsVAP7ZKaNkDTWXIaiTuLMU",
         'secret': "u89HSIXXEx3BbItro2RJFBuXI4ZZ5zmYxM36HGINWuD3ZP4ayy8y7uXFEMSfbOvM",
@@ -55,17 +55,17 @@ api_dict = {
         'apiKey': "uYWLRAPf8iXYDGfOzm5wR6w35uvn6PQWONzxZpe46FUDKLCQrZo3C5lK7HqchyIQ",
         'secret': "fDVklkFaCL36TR1ryjpaR4jZanDfbVwRpW545QUdFJvD1BIXrIPbGpKsABq0mhDa",
     },
-    # 'son4': {
-    #     'apiKey': "56739d25-",
-    #     'secret': "",
-    # },
+    'son1': {
+        'apiKey': "BKBKpOGOqE3SQiqEsXnM1nbEdhexO58PkcjviD0m1ocgvImMmUSdp2QNtCQb2vsj",
+        'secret': "VWHqTsYqkB9XkhOMy3064MyWWK9CgYT9ZlkmLHm54TFvCwO2nIllTly0HdXih02C",
+    },
     # 'son5': {
     #     'apiKey': "670aad81-",
     #     'secret': "",
     # },
-    # 'son6': {
-    #     'apiKey': "0ecf49a7-",
-    #     'secret': "",
+    # 'son1': {
+    #     'apiKey': "gXFbysjyuIahklw2Dx1suxvW7pHpp5BROITj4Tq2TtqKCejGkeXGNGvEf70IzT94",
+    #     'secret': "4cudAWwweEoQvWkkq8HXnODpYz12B9RdzNE34KiA6PE1XTpqiu1XwqDhuniQrKP3",
     # },
     # 'son7': {
     #     'apiKey': "b0c088ee-",
@@ -150,6 +150,41 @@ symbol_config_dict = {
                                 '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                                 },
             },
+        'time_interval': '1h'  # 脚本运行周期，即多久跑执行一次策略
+    },
+'son3': {
+        'symbol_config':
+            {
+                'MANAUSD_PERP': {'instrument_id': 'MANAUSD_PERP',
+                                 'instrument_type': 'spot',  # 使用K线的类型，现货'spot', 币本位合约'cfuture', u本位'ufuture'
+                                  # 这里合约也可以填spot，即用现货K线模拟合约K线，如果参数需求K线数大于70，建议填spot
+                                 'leverage': 1,
+                                 'strategy_name': 'real_signal_none',  # 使用的策略的名称
+                                 'para': [20],  # 参数
+                                 'initial_funds': False,
+                                 # 这里填True，则运行时按照下面所设置的initial_usd进行到等值套保状态，如有多余的币会转到现货账户，币不足的话则会购买
+                                 # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
+                                 # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
+                                 # 如果监测到合约账户币种保证金为0，将进行强制初始化
+                                 'initial_usd_funds': 20,  # u模式初始投入的资金美元价值initial_usd,至少为20
+                                 '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
+                                 },
+                'BNBUSD_PERP': {'instrument_id': 'BNBUSD_PERP',
+                                 'instrument_type': 'spot',  # 使用K线的类型，现货'spot', 币本位合约'cfuture', u本位'ufuture'
+                                  # 这里合约也可以填spot，即用现货K线模拟合约K线，如果参数需求K线数大于70，建议填spot
+                                 'leverage': 1,
+                                 'strategy_name': 'real_signal_para',  # 使用的策略的名称
+                                 'para': [1],  # 参数
+                                 'initial_funds': False,
+                                 # 这里填True，则运行时按照下面所设置的initial_usd进行到等值套保状态，如有多余的币会转到现货账户，币不足的话则会购买
+                                 # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
+                                 # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
+                                 # 如果监测到合约账户币种保证金为0，将进行强制初始化
+                                 'initial_usd_funds': 20,  # u模式初始投入的资金美元价值initial_usd,至少为20
+                                 '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
+                                 },
+
+            },
         'time_interval': '15m'  # 脚本运行周期，即多久跑执行一次策略
     },
 }
@@ -165,8 +200,8 @@ offset_time = '-5m'  # 目前支持m（分钟），h（小时）为单位。必�
 funding_config = {
     'funding_from_spot': True,  # 从现货中直接提取交易币种作为保证金，这里选True。注意！如果现货不足，则本参数会自动转为False，也就是直接买现货。
     'funding_coin': 'USDT',  # 用于买入现货的交易币种，目前仅能填USD等价币，如USDT，BUSD
-    'r_threshold': 0.0007,  # 建仓的最小期现差阈值,可设定为-1，则为忽略阈值，直接建仓
+    'r_threshold': 0.0005,  # 建仓的最小期现差阈值,可设定为-1，则为忽略阈值，直接建仓
     'execute_amount': 20,  # 每次建仓的美元价值，BTC最小为200，其他币最小为20。
-    'fee_use_bnb': True  # 使用BNB支付手续费
+    'fee_use_bnb': False  # 使用BNB支付手续费
 }
 

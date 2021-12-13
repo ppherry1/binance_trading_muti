@@ -173,7 +173,7 @@ def main():
                     else:
                         rule = time_interval
                     # 转化周期
-                    df = recent_candle_data[symbol].resample(rule=rule, offset=offset_time_re, on='candle_begin_time_GMT8').agg(agg_dict)
+                    df = recent_candle_data[symbol].resample(rule=rule, offset=offset_time_re, on='candle_begin_time_GMT8').agg(agg_dict).reset_index()
                     # 保存最后一行数据，保留index
                     df_bf = pd.read_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)))
                     df = df.iloc[-ever_len + 1:, :]

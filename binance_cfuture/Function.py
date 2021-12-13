@@ -1,6 +1,7 @@
 
 from binance_cfuture import Signals
 from binance_cfuture.Config import *
+from binance_cfuture.Signals import *
 import ccxt
 import math
 import pandas as pd
@@ -12,6 +13,7 @@ import hmac
 import hashlib
 import base64
 from urllib import parse
+import os
 
 
 pd.set_option('display.max_rows', 1000)
@@ -412,6 +414,15 @@ def binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode):
         symbol_info.loc[symbol_info['合约张数'] > 0, '持仓方向_' + mode] = 1  # 用屯币做保证金做多
         symbol_info.loc[symbol_info['合约张数'] < 0, '持仓方向_' + mode] = -1  # 用屯币做保证金做空
 
+    symbol_info['asset'] = symbol_info.index
+    symbol_info['asset'] = symbol_info['asset'].str.split('USD', expand=True)[0] + 'USDT'
+
+    price_df = pd.DataFrame(retry_wrapper(exchange.publicGetTickerBookTicker, act_name='spot_ticker'), dtype=float)
+    price_df = price_df[['symbol', 'bidPrice']]
+    price_df.set_index('symbol', inplace=True)
+    symbol_info = symbol_info.join(price_df, on='asset')
+    symbol_info['实际美元价值'] = symbol_info['账户币数'] * symbol_info['bidPrice']
+    symbol_info.drop(['asset', 'bidPrice'], inplace=True, axis=1)
     return symbol_info
 
 
@@ -470,6 +481,7 @@ def calculate_signal(symbol_info, symbol_config, symbol_candle_data, mode):
 
     # 输出变量
     symbol_signal = {}
+    save_dict = dict()
 
     # 逐个遍历交易对
     for symbol in symbol_config.keys():
@@ -486,6 +498,13 @@ def calculate_signal(symbol_info, symbol_config, symbol_candle_data, mode):
         if not df.empty:  # 当原始数据不为空的时候
             target_pos = getattr(Signals, symbol_config[symbol]['strategy_name'])(df, now_pos, avg_price,
                                                                                   symbol_config[symbol]['para'])
+        if recent_k['used'] == 0:
+            save_dict[symbol] = recent_k['k_line'].copy()
+            del recent_k['k_line']
+            recent_k['used'] = 1
+            save_dict[symbol]['strategy_name'] = symbol_config[symbol]['strategy_name']
+            save_dict[symbol]['para'] = symbol_config[symbol]['para']
+
         symbol_info.at[symbol, '目标持仓'] = target_pos  # 这行代码似乎可以删除
 
         symbol_info.at[symbol, '信号'] = 'NaN'
@@ -511,7 +530,7 @@ def calculate_signal(symbol_info, symbol_config, symbol_candle_data, mode):
 
         symbol_info.at[symbol, '信号时间'] = datetime.now()  # 计算产生信号的时间
 
-    return symbol_signal
+    return symbol_signal, save_dict
 
 
 # 针对某个类型订单，计算下单参数。供cal_all_order_info函数调用
@@ -628,8 +647,8 @@ def trading_initialization(exchange, funding_config, symbol_config):
         symbol_spot_tr = symbol_spot + funding_config['funding_coin'].upper()
         spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
         symbol_usd_value = symbol_balance * float(spot_sell1_price)
-        if symbol_config[symbol]['initial_funds'] or symbol_usd_value - 15.000001 <= 0:
-            if symbol_usd_value - 15.000001 <= 0:
+        if symbol_config[symbol]['initial_funds'] or symbol_usd_value - 5.000001 <= 0:
+            if symbol_usd_value - 5.000001 <= 0:
                 print('%s币本位保证金%f个， 美元价值$%f，不足$15，强制初始化' % (symbol_spot,symbol_balance, symbol_usd_value))
             # 如果保证金为0，将强制初始化
             future_num = symbol_config[symbol]['initial_usd_funds']/contract_size
@@ -665,7 +684,7 @@ def trading_initialization(exchange, funding_config, symbol_config):
                     # 如果已有空头仓位小于预设仓位，全部平空，保证金划转现货。
                     print('%s已持有空仓%f张，且空仓量小预设initial_usd_funds的张数%f张，仓位全部平空，重新初始化建仓' % (symbol, position_amt, -future_num))
                     future_sell1_price = exchange.dapiPublicGetTickerBookTicker(params={'symbol': symbol})[0]['askPrice']
-                    price = float(future_sell1_price) * 1.02
+                    price = float(future_sell1_price) * 0.98 if position_amt > 0 else float(future_sell1_price) * 1.02
                     price = round(price, coin_precision)
                     long_or_short = '开空' if position_amt > 0 else '开多'
                     deal_amt = abs(position_amt)
@@ -760,7 +779,8 @@ def trading_initialization(exchange, funding_config, symbol_config):
 
 def diff_future_spot(exchange, spot_symbol, future_symbol, r_threshold, sleep_time=2):
     while True:
-        spot_sell1_price = exchange.fapiPublicGetTickerBookTicker(params={'symbol': spot_symbol})['askPrice']
+        # spot_sell1_price = exchange.fapiPublicGetTickerBookTicker(params={'symbol': spot_symbol})['askPrice']  # 原
+        spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': spot_symbol})['askPrice']  # 改
         # 获取期货买一数据。因为期货是卖出，取买一。
         # noinspection PyUnresolvedReferences
         future_buy1_price = exchange.dapiPublicGetTickerBookTicker(params={'symbol': future_symbol})[0][
@@ -984,3 +1004,21 @@ def dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_tim
             content = '# ===本次为15时定时播报持仓周期,无交易===' + content + '\n\n'
 
         send_dingding_msg(content, robot_id=robot_id_secret[0], secret=robot_id_secret[1])
+
+
+# ================其他附加功能函数==================
+
+# 储存信号
+def save_signal_data(save_signals_dict, time_interval, offset, acc_name, root_path):
+    for symbol in save_signals_dict.keys():
+        save_signals_dict[symbol]['time_interval'] = time_interval
+        save_signals_dict[symbol]['offset_time'] = offset
+        save_signals_dict[symbol]['account_name'] = acc_name
+        save_signals_dict[symbol]['symbol'] = symbol
+        signal_file = os.path.join(root_path, 'data', 'save_signals', 'cfuture_cta',
+                                   '%s_%s.csv' % (acc_name, symbol))
+        header = False if os.path.exists(signal_file) else True
+        save_mode = 'a' if os.path.exists(signal_file) else 'w'
+        pd.DataFrame(save_signals_dict[symbol]).T.to_csv(signal_file, mode=save_mode, index=False, header=header,
+                                                         encoding='gb18030')
+        print('已储存%s信号日志，路径%s' % (symbol, signal_file))

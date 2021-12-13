@@ -53,7 +53,7 @@ def main():
     while True:
         # ==========获取持仓数据==========
         # 初始化symbol_info，在每次循环开始时都初始化，防止上次循环的内容污染本次循环的内容。
-        symbol_info_columns = ['账户币数', '原始币数', '持仓方向_'+mode, '合约张数', '持仓均价', '未实现盈亏']
+        symbol_info_columns = ['账户币数', '原始币数', '持仓方向_'+mode, '合约张数', '持仓均价', '未实现盈亏', '实际美元价值']
         symbol_info = pd.DataFrame(index=symbol_config.keys(), columns=symbol_info_columns)
 
         # 更新账户信息symbol_info
@@ -85,7 +85,7 @@ def main():
         #                                                                   symbol_config, max_candle_num)
 
         # ==========计算每个币种的交易信号==========
-        symbol_signal = calculate_signal(symbol_info, symbol_config, symbol_candle_data, mode)
+        symbol_signal, save_signals_dict = calculate_signal(symbol_info, symbol_config, symbol_candle_data, mode)
         print('\n产生信号时间:\n', symbol_info[['持仓方向_'+mode, '目标持仓', '信号', '信号时间']])
         print('\n本周期交易计划:', symbol_signal)
 
@@ -114,6 +114,10 @@ def main():
 
         # 发送钉钉
         dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_time, robot_id_secret, account_name)
+
+        # 保存signals日志
+        if save_signals_dict:
+            save_signal_data(save_signals_dict, time_interval, offset_time, account_name, root_path)
 
         # 本次循环结束
         print('\n', '-' * 20, '本次循环结束，%f秒后进入下一次循环' % long_sleep_time, '-' * 20, '\n\n')
