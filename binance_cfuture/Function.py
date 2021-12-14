@@ -740,14 +740,13 @@ def buy_absence_spot_to_margin(exchange, main_acc_ex, absence_num, symbol_spot, 
     print('尝试从现货账户提取保证金......')
     df_spot = pd.DataFrame(exchange.privateGetAccount()['balances'])
     spot_num = float(df_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
-    hold_margin_num = spot_num + absence_num
-    if spot_num > absence_num:
-        print('保证金余额%f，现货账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从现货提取保证金' % (hold_margin_num, symbol_spot, spot_num, absence_num))
+    if spot_num >= absence_num:
+        print('现货账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从现货提取保证金' % (symbol_spot, spot_num, absence_num))
     else:
-        print('保证金余额%f，现货账户有%s数量：%f，尚需求保证金数量%f，数量不足，故需买入现货' % (hold_margin_num, symbol_spot, spot_num, absence_num))
+        print('现货账户有%s数量：%f，尚需求保证金数量%f，数量不足，故需买入现货' % (symbol_spot, spot_num, absence_num))
         spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
-        buy_num = max((15 / float(spot_sell1_price)), absence_num)
-        if absence_num < (15 / float(spot_sell1_price)):
+        buy_num = max((15 / float(spot_sell1_price)), absence_num - spot_num)
+        if (absence_num - spot_num) < (15 / float(spot_sell1_price)):
             print('购买金额过小，使用预设最低购买金额$15购买!')
         price = float(spot_sell1_price) * 1.02
         absence_amount = buy_num * price - float(
@@ -765,7 +764,10 @@ def buy_absence_spot_to_margin(exchange, main_acc_ex, absence_num, symbol_spot, 
         print('买入%s现货: %f,' % (symbol_spot, buy_num))
         print(spot_order_info)
 
-    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=absence_num,
+    df_spot = pd.DataFrame(exchange.privateGetAccount()['balances'])
+    spot_num = float(df_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
+    transfer_num = min(spot_num, absence_num)
+    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=transfer_num,
                              from_account='币币',
                              to_account='合约')
     print('%s币币至合约划转成功！数量%f' % (symbol_spot, absence_num))
@@ -892,9 +894,9 @@ def binance_main_sub_transfer(main_acc_ex, asset, amount, from_email=None, to_em
               'asset': asset,
               'amount': amount, }
     if from_email:
-        params['from_email'] = from_email
+        params['fromEmail'] = from_email
     if to_email:
-        params['to_email'] = to_email
+        params['toEmail'] = to_email
     info = main_acc_ex.sapiPostSubAccountUniversalTransfer(params=params)
     return info
 
