@@ -637,49 +637,49 @@ def trading_initialization(exchange, funding_config, symbol_config, main_acc_ex)
         symbol_config[symbol]['face_value'] = contract_size
         df_balance = pd.DataFrame(exchange.dapiPrivateGetAccount()['assets'])
         symbol_withdraw = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'maxWithdrawAmount'].values[0])
-        symbol_c_wallet = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'walletBalance'].values[0]) + float(
+        hold_margin_num = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'walletBalance'].values[0]) + float(
             df_balance.loc[df_balance['asset'] == symbol_spot, 'unrealizedProfit'].values[0])
         symbol_spot_qr = symbol_spot + funding_config['funding_coin'].upper()
         symbol_spot_tr = symbol_spot + funding_config['funding_coin'].upper()
         spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
-        symbol_usd_value = symbol_c_wallet * float(spot_sell1_price)
+        symbol_usd_value = hold_margin_num * float(spot_sell1_price)
         if symbol_config[symbol]['initial_funds'] or symbol_usd_value - 5.000001 <= 0:
             if symbol_config[symbol]['initial_funds'] is False and symbol_usd_value - 5.000001 <= 0:
-                print('%s币本位保证金%f个， 美元价值$%f，不足$5，强制初始化' % (symbol_spot,symbol_c_wallet, symbol_usd_value))
+                print('%s币本位保证金%f个， 美元价值$%f，不足$5，强制初始化' % (symbol_spot,hold_margin_num, symbol_usd_value))
             # 如果保证金为0，将强制初始化
-            future_num = symbol_config[symbol]['initial_usd_funds']/contract_size
-            spot_amount = symbol_config[symbol]['initial_usd_funds'] / float(spot_sell1_price)
+            expect_amt = symbol_config[symbol]['initial_usd_funds']/contract_size
+            expect_margin_num = symbol_config[symbol]['initial_usd_funds'] / float(spot_sell1_price)
             df_position = pd.DataFrame(exchange.dapiPrivateGetPositionRisk())
             position_amt = float(df_position.loc[(df_position['symbol'] == symbol) & (df_position['positionSide'] == 'BOTH'), 'positionAmt'].values[0])
             if position_amt != 0:
-                if position_amt < -future_num:
+                if position_amt < -expect_amt:
                     # 如果已有空头仓位大于预设仓位，多余部分平空，多余保证金转到现货。
-                    print('%s已持有空仓%f张，且空仓量大于预设initial_usd_funds的张数%f张，多余的仓位平空' % (symbol, position_amt, -future_num))
+                    print('%s已持有空仓%f张，且空仓量大于预设initial_usd_funds的张数%f张，多余的仓位平空' % (symbol, position_amt, -expect_amt))
                     future_sell1_price = exchange.dapiPublicGetTickerBookTicker(params={'symbol': symbol})[0]['askPrice']
                     price = float(future_sell1_price) * 1.02
                     price = round(price, coin_precision)
-                    deal_amt = -future_num - position_amt
+                    deal_amt = -expect_amt - position_amt
                     future_order_info = binance_future_place_order(exchange=exchange,
                                                                    symbol=symbol,
                                                                    long_or_short='开多', price=price,
                                                                    amount=deal_amt)
                     print('平空多余仓位%f' % deal_amt)
                     print(future_order_info)
-                    surplus_balance = symbol_c_wallet - spot_amount
-                    if surplus_balance > symbol_withdraw:
+                    surplus_num = hold_margin_num - expect_margin_num
+                    if surplus_num > symbol_withdraw:
                         print('%s剩余保证金不足，可能是杠杆倍数太低所致，请调整杠杆倍数，程序退出' % symbol)
                         raise Exception
                     else:
-                        print('%s划转多余保证金%s%f到现货账户' % (symbol, symbol_spot, surplus_balance))
-                        binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=surplus_balance, from_account='合约',
+                        print('%s划转多余保证金%s%f到现货账户' % (symbol, symbol_spot, surplus_num))
+                        binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=surplus_num, from_account='合约',
                                                  to_account='币币')
-                elif int(position_amt) == -int(future_num):
+                elif int(position_amt) == -int(expect_amt):
                     print('%s 空头持仓量=预设建仓量，无需建仓！' % symbol)
                     pass
                 else:
                     if position_amt > 0:
                         # 如果已有空头仓位小于预设仓位，全部平空，保证金划转现货。
-                        print('%s已持有多仓%f张，由于预设重新建仓，平掉所有多仓，重新初始化到套保状态（%s张空）' % (symbol, position_amt, -future_num))
+                        print('%s已持有多仓%f张，由于预设重新建仓，平掉所有多仓，重新初始化到套保状态（%s张空）' % (symbol, position_amt, -expect_amt))
                         future_sell1_price = exchange.dapiPublicGetTickerBookTicker(params={'symbol': symbol})[0]['askPrice']
                         price = float(future_sell1_price) * 0.98
                         price = round(price, coin_precision)
@@ -693,48 +693,54 @@ def trading_initialization(exchange, funding_config, symbol_config, main_acc_ex)
                         print(future_order_info)
                         position_amt = 0
                     else:
-                        print('%s已持有空仓%f张，低于预设值，下面检查并补充保证金，恢复预设套保状态（%s张空)' % (symbol, position_amt, -future_num))
+                        print('%s已持有空仓%f张，低于预设值，下面检查并补充保证金，恢复预设套保状态（%s张空)' % (symbol, position_amt, -expect_amt))
                         special_initial = True
             if position_amt == 0 or special_initial:
 
-                if symbol_c_wallet > spot_amount:
-                    surplus_balance = symbol_c_wallet - spot_amount
-                    print('%s划转多余保证金%s%f到现货账户' % (symbol, symbol_spot, surplus_balance))
-                    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=surplus_balance,
+                if hold_margin_num > expect_margin_num:
+                    surplus_num = hold_margin_num - expect_margin_num
+                    print('%s划转多余保证金%s%f到现货账户' % (symbol, symbol_spot, surplus_num))
+                    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=surplus_num,
                                              from_account='合约',
                                              to_account='币币')
                 else:
-                    absence_amount = spot_amount - symbol_c_wallet
+                    absence_num = expect_margin_num - hold_margin_num
                     print('尝试从现货账户提取保证金......')
                     df_spot = pd.DataFrame(exchange.privateGetAccount()['balances'])
-                    symbol_balance = float(df_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
-                    if symbol_balance > absence_amount:
-                        print('保证金余额%f，现货账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从现货提取保证金' % (symbol_c_wallet, symbol_spot, symbol_balance, absence_amount))
+                    spot_num = float(df_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
+                    if spot_num > absence_num:
+                        print('保证金余额%f，现货账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从现货提取保证金' % (hold_margin_num, symbol_spot, spot_num, absence_num))
                     else:
-                        print('保证金余额%f，现货账户有%s数量：%f，尚需求保证金数量%f，数量不足，故需买入现货' % (symbol_c_wallet, symbol_spot, symbol_balance, absence_amount))
+                        print('保证金余额%f，现货账户有%s数量：%f，尚需求保证金数量%f，数量不足，故需买入现货' % (hold_margin_num, symbol_spot, spot_num, absence_num))
                         spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
-                        buy_spot_num = max((15 / float(spot_sell1_price)), absence_amount)
-                        if absence_amount < (15 / float(spot_sell1_price)):
+                        buy_num = max((15 / float(spot_sell1_price)), absence_num)
+                        if absence_num < (15 / float(spot_sell1_price)):
                             print('购买金额过小，使用预设最低购买金额$15购买!')
                         price = float(spot_sell1_price) * 1.02
+                        absence_amount = buy_num * price - float(df_spot.loc[df_spot['asset'] == funding_config['funding_coin'], 'free'].values[0])
+                        if absence_amount > 0:
+                            print('')
+                            if 'funding_coin_from_main_acc':
+                                info = binance_main_sub_transfer(main_acc_ex, funding_config['funding_coin'], absence_amount, to_email=api_dict[account_name]['email'])
+
                         spot_order_info = binance_spot_place_order(exchange=exchange, symbol=symbol_spot_tr,
-                                                                   long_or_short='买入', price=price, amount=buy_spot_num)
-                        print('买入%s现货: %f,' % (symbol_spot, buy_spot_num))
+                                                                   long_or_short='买入', price=price, amount=buy_num)
+                        print('买入%s现货: %f,' % (symbol_spot, buy_num))
                         print(spot_order_info)
 
-                    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=absence_amount,
+                    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=absence_num,
                                              from_account='币币',
                                              to_account='合约')
                     time.sleep(3)
 
-                deal_num = future_num + position_amt
+                deal_amt = expect_amt + position_amt
                 future_buy1_price = exchange.dapiPublicGetTickerBookTicker(params={'symbol': symbol})[0]['bidPrice']
                 price = float(future_buy1_price) * 0.98
                 price = round(price, coin_precision)
                 future_order_info = binance_future_place_order(exchange=exchange, symbol=symbol,
                                                                long_or_short='开空', price=price,
-                                                               amount=deal_num)
-                print('合约%s开空%f张，信息如下：' % (symbol, deal_num))
+                                                               amount=deal_amt)
+                print('合约%s开空%f张，信息如下：' % (symbol, deal_amt))
                 print(future_order_info)
 
             print('%s初始化完成！' % symbol)
