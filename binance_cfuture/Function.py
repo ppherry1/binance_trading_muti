@@ -635,7 +635,7 @@ def trading_initialization(exchange, funding_config, symbol_config):
         coin_precision = int(df_market.loc[symbol, 'pricePrecision'])
         contract_size = int(df_market.loc[symbol, 'contractSize'])
         symbol_config[symbol]['face_value'] = contract_size
-        df_balance = pd.DataFrame(exchange.dapiPrivateGetAccount()['asset'])
+        df_balance = pd.DataFrame(exchange.dapiPrivateGetAccount()['assets'])
         symbol_withdraw = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'maxWithdrawAmount'].values[0])
         symbol_c_wallet = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'walletBalance'].values[0]) + float(
             df_balance.loc[df_balance['asset'] == symbol_spot, 'unrealizedProfit'].values[0])
@@ -704,23 +704,25 @@ def trading_initialization(exchange, funding_config, symbol_config):
                                              from_account='合约',
                                              to_account='币币')
                 else:
-                    spot_amount = spot_amount - symbol_c_wallet
+                    absence_amount = spot_amount - symbol_c_wallet
                     print('尝试从现货账户提取保证金......')
                     df_spot = pd.DataFrame(exchange.privateGetAccount()['balances'])
                     symbol_balance = float(df_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
-                    if symbol_balance > spot_amount:
-                        print('现货账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从现货提取保证金' % (symbol_spot, symbol_balance, spot_amount))
+                    if symbol_balance > absence_amount:
+                        print('保证金余额%f，现货账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从现货提取保证金' % (symbol_c_wallet, symbol_spot, symbol_balance, absence_amount))
                     else:
-                        print('现货账户有%s数量：%f，策略需求数量%f，数量不足，故需买入现货' % (symbol_spot, symbol_balance, spot_amount))
+                        print('保证金余额%f，现货账户有%s数量：%f，尚需求保证金数量%f，数量不足，故需买入现货' % (symbol_c_wallet, symbol_spot, symbol_balance, absence_amount))
                         spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
-                        buy_spot_num = max((15 / spot_sell1_price), (spot_amount-symbol_balance))
+                        buy_spot_num = max((15 / float(spot_sell1_price)), absence_amount)
+                        if absence_amount < (15 / float(spot_sell1_price)):
+                            print('购买金额过小，使用预设最低购买金额$15购买!')
                         price = float(spot_sell1_price) * 1.02
                         spot_order_info = binance_spot_place_order(exchange=exchange, symbol=symbol_spot_tr,
                                                                    long_or_short='买入', price=price, amount=buy_spot_num)
                         print('买入%s现货: %f,' % (symbol_spot, buy_spot_num))
                         print(spot_order_info)
 
-                    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=spot_amount,
+                    binance_account_transfer(exchange=exchange, currency=symbol_spot, amount=absence_amount,
                                              from_account='币币',
                                              to_account='合约')
                     time.sleep(3)
