@@ -34,6 +34,7 @@ print('执行时间周期：', time_interval, ',底层K线周期：', kline_inte
 # =从config中读取相关配置信息
 exchange = ccxt.binance(BINANCE_CONFIG_dict[account_name])
 symbol_config = symbol_config_dict[account_name]['symbol_config']
+main_ex = ccxt.binance(BINANCE_CONFIG_dict['main'])
 print('交易信息：', symbol_config)
 
 # =获取交易精度
@@ -48,7 +49,7 @@ def main():
     # max_candle_num = 5  # 每次获取的K线数量
     # symbol_candle_data = get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval_re,
     #                                                                  max_candle_num, if_print=True)
-    trading_initialization(exchange, funding_config, symbol_config)
+    trading_initialization(exchange, funding_config, symbol_config, main_ex)
     # =进入每次的循环
     while True:
         # ==========获取持仓数据==========

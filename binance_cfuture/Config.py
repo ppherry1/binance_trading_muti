@@ -43,19 +43,22 @@ robot_id_secret = [robot_id, secret]
 # ===各个子账户的api配置
 # 手工输入每个子账户的api
 api_dict = {
-    # 'son1': {
-    #         'apiKey': 'A3sgiz5hLZ2vGn3uYMm43pFzrrkSCsXR2cPTmZ801MG20Bz91Bve8UuxI6iPLPLj',
-    #         'secret': 'OhLkUu99HDKqOhujQEqDvp0Yqi049z5qGe3RqaapGQfWEo91VoR6w5xwd4Tpq2GC',
-    # },
+    'main': {
+            'apiKey': 'flVn0RcPr4m4hrJ8fZHXEMJHDb7XDGEhvhqS48eOXYkQ1nMXHAZoo5LTK3fP7v5U',
+            'secret': 'RoyBB2Uq4QCOvi4sFVlXboM5e5jpN2yWirCXaFMnbWE0W8wT1eGWmX1d3Wl7XhgK',
+    },
      'son2': {
+        'email': 'ppherry2_virtual@rw2vcdbsnoemail.com',
         'apiKey': "mYpuRg1IsYCBO52k9KMvLHEx7hUQcMpMKrLyrXuILPsVAP7ZKaNkDTWXIaiTuLMU",
         'secret': "u89HSIXXEx3BbItro2RJFBuXI4ZZ5zmYxM36HGINWuD3ZP4ayy8y7uXFEMSfbOvM",
     },
     'son3': {
+        'email': 'ppherry3_virtual@91z0byq6noemail.com',
         'apiKey': "uYWLRAPf8iXYDGfOzm5wR6w35uvn6PQWONzxZpe46FUDKLCQrZo3C5lK7HqchyIQ",
         'secret': "fDVklkFaCL36TR1ryjpaR4jZanDfbVwRpW545QUdFJvD1BIXrIPbGpKsABq0mhDa",
     },
     'son1': {
+        'email': 'ppherry1_virtual@7gctieg8noemail.com',
         'apiKey': "BKBKpOGOqE3SQiqEsXnM1nbEdhexO58PkcjviD0m1ocgvImMmUSdp2QNtCQb2vsj",
         'secret': "VWHqTsYqkB9XkhOMy3064MyWWK9CgYT9ZlkmLHm54TFvCwO2nIllTly0HdXih02C",
     },
@@ -199,5 +202,8 @@ offset_time = '-5m'  # 目前支持m（分钟），h（小时）为单位。必�
 # 设置初始资金来源相关参数
 funding_config = {
     'funding_coin': 'USDT',  # 若现货不足，用于买入现货的交易币种，目前仅能填USD等价币，如USDT，BUSD
+    'funding_coin_from_main_acc': True,  # 是否从母账户划转计价币
+    'spot_from_main_acc': True,  # 是否从母账户划转保证金币
+    'surplus_spot_deal': 'TO_MAIN',  # 建仓剩余现货处理方式,'SAVE'为保留在子账户现货账户，'TO_MAIN'为划转到母账户现货账户
 }
 

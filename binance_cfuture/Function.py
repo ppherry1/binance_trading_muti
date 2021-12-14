@@ -626,7 +626,7 @@ def cal_all_order_info(symbol_signal, symbol_info, symbol_config, exchange, mode
 
 
 # 建立初始状态,合约账户未开仓,合约账户币种余额为0
-def trading_initialization(exchange, funding_config, symbol_config):
+def trading_initialization(exchange, funding_config, symbol_config, main_acc_ex):
     special_initial = False
     for symbol in symbol_config.keys():
         symbol_spot = symbol[:symbol.find('USD')].upper()
@@ -854,6 +854,20 @@ def binance_future_place_order(exchange, symbol, long_or_short, price, amount):
 
     print('币安合约交易下单报错次数过多，程序终止')
     exit()
+
+
+#
+def binance_main_sub_transfer(main_acc_ex, asset, amount, from_email=None, to_email=None, fromAccountType='SPOT', toAccountType='SPOT'):
+    params = {'fromAccountType': fromAccountType,
+              'toAccountType': toAccountType,
+              'asset': asset,
+              'amount': amount, }
+    if from_email:
+        params['from_email'] = from_email
+    if to_email:
+        params['to_email'] = to_email
+    info = main_acc_ex.sapiPostSubAccountUniversalTransfer(params=params)
+    return info
 
 
 # binance各个账户间转钱
