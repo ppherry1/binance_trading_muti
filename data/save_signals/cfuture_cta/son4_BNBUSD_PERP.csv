@@ -1,0 +1,2 @@
+candle_begin_time_GMT8,open,high,low,close,volume,quote_volume,num,initiative_vol,initiative_quote_vol,signal,strategy_name,para,time_interval,offset_time,account_name,symbol
+2021-12-15 14:40:00,528.8,529.2,527.6,528.2,5624.121,2970861.9367,4273.0,3029.679,1600460.8155,,real_signal_none,[20],15m,-5m,son4,BNBUSD_PERP

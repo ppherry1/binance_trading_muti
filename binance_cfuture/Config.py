@@ -67,10 +67,11 @@ api_dict = {
         'apiKey': "DS2xZ14YdEVLkNUTkMcEpWdimbQsr7Ra4brNpyant5Y6iTpS9HKwPXhl6ry6m8i1",
         'secret': "0qZGXK4vmMA8bLm5mgTh17mdavIpZuMfHGt84rYY5uUOxMGVIEQUxTfkSU41IoYn",
     },
-    # 'son1': {
-    #     'apiKey': "gXFbysjyuIahklw2Dx1suxvW7pHpp5BROITj4Tq2TtqKCejGkeXGNGvEf70IzT94",
-    #     'secret': "4cudAWwweEoQvWkkq8HXnODpYz12B9RdzNE34KiA6PE1XTpqiu1XwqDhuniQrKP3",
-    # },
+    'son4': {
+        'email': 'ppherry4_virtual@3qh68epqnoemail.com',
+        'apiKey': "DT00t10taGyGwvTKEEmfIxRmUzsrXzlcJLDypFGukl4NUAZxZalWCnHgwOiHg706",
+        'secret': "OXLmFhHtq9Af5wgSe3KCOCSgnPD4wivCMJZVBGGhqKVJFE7cyEBqHmxmMSfyeYnk",
+    },
     # 'son7': {
     #     'apiKey': "b0c088ee-",
     #     'secret': "",
@@ -192,10 +193,10 @@ symbol_config_dict = {
 
         'time_interval': '15m'  # 脚本运行周期，即多久跑执行一次策略
     },
-    'son12': {
+    'son4': {
         'symbol_config':
             {
-                'BNBUSD_PERP': {'instrument_id': 'BNBUSD_PERP',
+                'UNIUSD_PERP': {'instrument_id': 'UNIUSD_PERP',
                                  'instrument_type': 'spot',  # 使用K线的类型，现货'spot', 币本位合约'cfuture', u本位'ufuture'
                                  # 这里合约也可以填spot，即用现货K线模拟合约K线，如果参数需求K线数大于70，建议填spot
                                  'leverage': 1,
@@ -206,7 +207,7 @@ symbol_config_dict = {
                                  # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
                                  # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
                                  # 如果监测到合约账户币种保证金为0，将进行强制初始化
-                                 'initial_usd_funds': 20,  # u模式初始投入的资金美元价值initial_usd,至少为20
+                                 'initial_usd_funds': 30,  # u模式初始投入的资金美元价值initial_usd,至少为20
                                  '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                                  },
 
@@ -227,7 +228,7 @@ offset_time = '-5m'  # 目前支持m（分钟），h（小时）为单位。必�
 funding_config = {
     'spot_from_main_acc': True,  # 是否从母账户划转保证金币
     'funding_coin': 'USDT',  # 若现货不足，用于买入现货的交易币种，目前仅能填USD等价币，如USDT，BUSD
-    'funding_coin_from_main_acc': False,  # 是否从母账户划转计价币
+    'funding_coin_from_main_acc': True,  # 是否从母账户划转计价币
     'surplus_spot_deal': 'TO_MAIN',  # 建仓剩余现货处理方式,'SAVE'为保留在子账户现货账户，'TO_MAIN'为划转到母账户现货账户
 }
 
