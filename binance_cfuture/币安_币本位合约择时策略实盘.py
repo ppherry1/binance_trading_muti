@@ -116,6 +116,12 @@ def main():
         # 发送钉钉
         dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_time, robot_id_secret, account_name)
 
+        # 利润提取
+        if take_profit_rate > 0:
+            take_info = pd.DataFrame(take_profit(exchange, main_ex, symbol_info, take_profit_rate))
+            if not take_info.empty:
+                dingding_take_profit_report(take_info)
+
         # 保存signals日志
         if save_signals_dict:
             save_signal_data(save_signals_dict, time_interval, offset_time, account_name, root_path)

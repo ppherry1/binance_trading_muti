@@ -44,8 +44,8 @@ robot_id_secret = [robot_id, secret]
 # 手工输入每个子账户的api
 api_dict = {
     'main': {
-            'apiKey': 'flVn0RcPr4m4hrJ8fZHXEMJHDb7XDGEhvhqS48eOXYkQ1nMXHAZoo5LTK3fP7v5U',
-            'secret': 'RoyBB2Uq4QCOvi4sFVlXboM5e5jpN2yWirCXaFMnbWE0W8wT1eGWmX1d3Wl7XhgK',
+            'apiKey': 'ZcVo562JplzdaRRuTbS8PK760r7hGouocKXFi1MjZ56SslMMBqPcPgTFbjvT8Uvi',
+            'secret': '6bi9D9Z8rlQUQmjhdw2iv1Mbm9CdXJA1PPuksyZOysQchKL346arHDfs042TemZr',
     },
      'son2': {
         'email': 'ppherry2_virtual@rw2vcdbsnoemail.com',
@@ -72,10 +72,11 @@ api_dict = {
         'apiKey': "DT00t10taGyGwvTKEEmfIxRmUzsrXzlcJLDypFGukl4NUAZxZalWCnHgwOiHg706",
         'secret': "OXLmFhHtq9Af5wgSe3KCOCSgnPD4wivCMJZVBGGhqKVJFE7cyEBqHmxmMSfyeYnk",
     },
-    # 'son7': {
-    #     'apiKey': "b0c088ee-",
-    #     'secret': "",
-    # },
+    'son12': {
+          'email': 'ppherry12_virtual@9phr5pwxnoemail.com',
+          'apiKey': "6YDauSlZ1Vin5jBa4QUpEO0v0MuxdAIw9WyKd1G8N16ze8Ehj1LfwpAjclRDJUxQ",
+          'secret': "YbydnvFHt1NaL9Vhj0FAVypUhU42Q5cetsOHjFuDLvtWRba7SbBWc5UAeVvl2f0r",
+    },
     # 'son8': {
     #     'apiKey': "2f7e6278-",
     #     'secret': "",
@@ -193,10 +194,10 @@ symbol_config_dict = {
 
         'time_interval': '15m'  # 脚本运行周期，即多久跑执行一次策略
     },
-    'son4': {
+    'son12': {
         'symbol_config':
             {
-                'UNIUSD_PERP': {'instrument_id': 'UNIUSD_PERP',
+                'BNBUSD_PERP': {'instrument_id': 'BNBUSD_PERP',
                                  'instrument_type': 'spot',  # 使用K线的类型，现货'spot', 币本位合约'cfuture', u本位'ufuture'
                                  # 这里合约也可以填spot，即用现货K线模拟合约K线，如果参数需求K线数大于70，建议填spot
                                  'leverage': 1,
@@ -207,7 +208,7 @@ symbol_config_dict = {
                                  # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
                                  # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
                                  # 如果监测到合约账户币种保证金为0，将进行强制初始化
-                                 'initial_usd_funds': 30,  # u模式初始投入的资金美元价值initial_usd,至少为20
+                                 'initial_usd_funds': 20,  # u模式初始投入的资金美元价值initial_usd,至少为20
                                  '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                                  },
 
@@ -232,3 +233,4 @@ funding_config = {
     'surplus_spot_deal': 'TO_MAIN',  # 建仓剩余现货处理方式,'SAVE'为保留在子账户现货账户，'TO_MAIN'为划转到母账户现货账户
 }
 
+take_profit_rate = 1.5  # 如果在回到套保状态时，保证金金额达到初始资金的几倍时，将提取多余的保证金（利润）到母账户。
