@@ -750,14 +750,14 @@ def trading_initialization(exchange, funding_config, symbol_config, main_acc_ex)
             df_balance.loc[df_balance['asset'] == symbol_spot, 'unrealizedProfit'].values[0])
         symbol_spot_qr = symbol_spot + funding_config['funding_coin'].upper()
         symbol_spot_tr = symbol_spot + funding_config['funding_coin'].upper()
-        spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
-        symbol_usd_value = hold_margin_num * float(spot_sell1_price)
+        spot_sell1_price = float(exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice'])
+        symbol_usd_value = hold_margin_num * spot_sell1_price
         if symbol_config[symbol]['initial_funds'] or symbol_usd_value - 5.000001 <= 0:
             if symbol_config[symbol]['initial_funds'] is False and symbol_usd_value - 5.000001 <= 0:
                 print('%s币本位保证金%f个， 美元价值$%f，不足$5，强制初始化' % (symbol_spot,hold_margin_num, symbol_usd_value))
             # 如果保证金为0，将强制初始化
             expect_amt = symbol_config[symbol]['initial_usd_funds']/contract_size
-            expect_margin_num = symbol_config[symbol]['initial_usd_funds'] / float(spot_sell1_price)
+            expect_margin_num = symbol_config[symbol]['initial_usd_funds'] / spot_sell1_price
             df_position = pd.DataFrame(exchange.dapiPrivateGetPositionRisk())
             position_amt = float(df_position.loc[(df_position['symbol'] == symbol) & (df_position['positionSide'] == 'BOTH'), 'positionAmt'].values[0])
             if hold_margin_num > expect_margin_num:
@@ -772,7 +772,7 @@ def trading_initialization(exchange, funding_config, symbol_config, main_acc_ex)
                                                      from_email=api_dict[account_name]['email'])
                     print(info)
             else:
-                if (expect_margin_num - hold_margin_num) * spot_sell1_price > contract_size * 0.9:
+                if ((expect_margin_num - hold_margin_num) * spot_sell1_price > contract_size * 0.9) or symbol_usd_value - 5.000001 <= 0:
                     buy_absence_spot_to_margin(exchange, main_acc_ex, expect_margin_num - hold_margin_num, symbol_spot, symbol_spot_qr,
                                                symbol_spot_tr)
                 else:
