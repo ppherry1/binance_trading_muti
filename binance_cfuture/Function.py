@@ -740,25 +740,47 @@ def buy_absence_spot_to_margin(exchange, main_acc_ex, absence_num, symbol_spot, 
     print('尝试从现货账户提取保证金......')
     df_spot = pd.DataFrame(exchange.privateGetAccount()['balances'])
     spot_num = float(df_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
+    still_absence_num = 0
+    df_main_spot = pd.DataFrame(main_acc_ex.privateGetAccount()['balances'])
+    main_spot_num = float(df_main_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
     if spot_num >= absence_num:
         print('现货账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从现货提取保证金' % (symbol_spot, spot_num, absence_num))
     else:
-        print('现货账户有%s数量：%f，尚需求保证金数量%f，数量不足，故需买入现货' % (symbol_spot, spot_num, absence_num))
+        still_absence_num = absence_num - spot_num
+        if funding_config['spot_from_main_acc']:
+            print('现货账户有%s数量：%f，尚需求保证金数量%f，数量不足，尝试从母账户划转现货...' % (symbol_spot, spot_num, absence_num))
+            if main_spot_num >= still_absence_num:
+                print('母账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从母账户现货提取全额保证金' % (symbol_spot, main_spot_num, still_absence_num))
+            else:
+                print('母账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从母账户现货提取保证金%f,剩余缺口:%f' % (symbol_spot, main_spot_num, still_absence_num, main_spot_num, still_absence_num - main_spot_num))
+                transfer_num = min(main_spot_num, still_absence_num)
+                info = binance_main_sub_transfer(main_acc_ex, symbol_spot, transfer_num, to_email=api_dict[account_name]['email'])
+                print('现货%s从母账户转入成功...数量%f,transfer_id:' % (symbol_spot, transfer_num))
+                print(info)
+                still_absence_num = still_absence_num - main_spot_num
+    if still_absence_num > 0:
         spot_sell1_price = exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice']
-        buy_num = max((15 / float(spot_sell1_price)), absence_num - spot_num)
-        if (absence_num - spot_num) < (15 / float(spot_sell1_price)):
+        buy_num = max((15 / float(spot_sell1_price)), still_absence_num)
+        if still_absence_num < (15 / float(spot_sell1_price)):
             print('购买金额过小，使用预设最低购买金额$15购买!')
         price = float(spot_sell1_price) * 1.02
-        absence_amount = buy_num * price - float(
-            df_spot.loc[df_spot['asset'] == funding_config['funding_coin'], 'free'].values[0])
+        absence_amount = buy_num * price - float(df_spot.loc[df_spot['asset'] == funding_config['funding_coin'], 'free'].values[0])
         if absence_amount > 0:
             print('子账户计价币%s不足，缺口:%f' % (funding_config['funding_coin'], absence_amount))
-            if 'funding_coin_from_main_acc':
+            if funding_config['funding_coin_from_main_acc'] is True:
                 print('尝试从母账户转入计价币%s...数量%f' % (funding_config['funding_coin'], absence_amount))
-                info = binance_main_sub_transfer(main_acc_ex, funding_config['funding_coin'], absence_amount,
-                                                 to_email=api_dict[account_name]['email'])
-                print('计价币%s转入成功...数量%f,transfer_id:' % (funding_config['funding_coin'], absence_amount))
-                print(info)
+                main_funding_amount = float(df_main_spot.loc[df_spot['asset'] == funding_config['funding_coin'], 'free'].values[0])
+                if main_funding_amount >= absence_amount:
+                    info = binance_main_sub_transfer(main_acc_ex, funding_config['funding_coin'], absence_amount,
+                                                     to_email=api_dict[account_name]['email'])
+                    print('计价币%s转入成功...数量%f,transfer_id:' % (funding_config['funding_coin'], absence_amount))
+                    print(info)
+                else:
+                    print('母账户计价币不足，脚本退出')
+                    exit()
+            else:
+                print('计价币不足，脚本退出')
+                exit()
         spot_order_info = binance_spot_place_order(exchange=exchange, symbol=symbol_spot_tr,
                                                    long_or_short='买入', price=price, amount=buy_num)
         print('买入%s现货: %f,' % (symbol_spot, buy_num))
@@ -772,6 +794,11 @@ def buy_absence_spot_to_margin(exchange, main_acc_ex, absence_num, symbol_spot, 
                              to_account='合约')
     print('%s币币至合约划转成功！数量%f' % (symbol_spot, absence_num))
     time.sleep(3)
+    if (funding_config['surplus_spot_deal'] == 'TO_MAIN') and ((spot_num - transfer_num) > 0):
+        print('多余现货%s划转母账户，数量%f!注意，母账户需手动卖出!!' % (symbol_spot, spot_num - transfer_num))
+        info = binance_main_sub_transfer(main_acc_ex, symbol_spot, spot_num - transfer_num,
+                                         from_email=api_dict[account_name]['email'])
+        print(info)
 
 
 # def diff_future_spot(exchange, spot_symbol, future_symbol, r_threshold, sleep_time=2):
