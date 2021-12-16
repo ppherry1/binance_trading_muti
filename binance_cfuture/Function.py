@@ -1010,7 +1010,7 @@ def dingding_take_profit_report(take_info):
     content = '====子账户%s利润提取通知===' % account_name + '\n'
     symbol_info_str = ['\n\n' + str(x) + '\n' + y.to_string() for x, y in take_info.iterrows()]
     content += '-----提取明细' + ''.join(symbol_info_str) + '\n\n'
-    send_dingding_msg(symbol_info_str)
+    send_dingding_msg(content)
 
 # ================其他附加功能函数==================
 
@@ -1034,16 +1034,17 @@ def save_signal_data(save_signals_dict, time_interval, offset, acc_name, root_pa
 def take_profit(exchange, main_acc_ex, symbol_info, take_rate):
     take_list = []
     for symbol in symbol_info.index:
+        position_side = symbol_info.at[symbol, '持仓方向_u模式']
         symbol_spot = symbol[:symbol.find('USD')].upper()
         margin_usd_value = symbol_info.at[symbol, '实际美元价值']
-        initial_usd_funds = funding_config['initial_usd_funds']
+        initial_usd_funds = symbol_config_dict[account_name]['symbol_config'][symbol]['initial_usd_funds']
         face_value = symbol_info.at[symbol, '合约面值']
         hold_margin_num = symbol_info.at[symbol, '账户币数']
         spot_sell1_price = margin_usd_value / hold_margin_num
         expect_amt = int(initial_usd_funds * take_rate / face_value)
         expect_margin_value = expect_amt * face_value
         surplus_num = (margin_usd_value - expect_margin_value) / spot_sell1_price
-        if surplus_num * spot_sell1_price > 1:
+        if (surplus_num * spot_sell1_price > 1): # and (position_side == 0):
             print('%s符合提取利润条件，预计提取利润%f%s' % (symbol, surplus_num, symbol_spot))
             tmp_dict = dict()
             info = binance_main_sub_transfer(main_acc_ex, symbol_spot, surplus_num * 0.999,
@@ -1052,7 +1053,7 @@ def take_profit(exchange, main_acc_ex, symbol_info, take_rate):
             print(info)
             position_amt = symbol_info.at[symbol, '合约张数']
             deal_amt = expect_amt + position_amt
-            print('开始初始化套保仓位！')
+            print('处理多余仓位，以达到套保状态！')
             long_or_short = ''
             if deal_amt != 0:
                 long_or_short = '开多' if deal_amt < 0 else '开空'

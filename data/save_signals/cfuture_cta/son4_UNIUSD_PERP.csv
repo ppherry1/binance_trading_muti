@@ -1,0 +1,2 @@
+candle_begin_time_GMT8,open,high,low,close,volume,quote_volume,num,initiative_vol,initiative_quote_vol,signal,strategy_name,para,time_interval,offset_time,account_name,symbol
+2021-12-15 15:10:00,14.89,15.0,14.86,14.99,23208.29,346885.8902,849.0,16477.87,246261.9034,,real_signal_none,[20],15m,-5m,son4,UNIUSD_PERP

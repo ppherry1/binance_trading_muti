@@ -203,12 +203,12 @@ symbol_config_dict = {
                                  'leverage': 1,
                                  'strategy_name': 'real_signal_none',  # 使用的策略的名称
                                  'para': [20],  # 参数
-                                 'initial_funds': True,
+                                 'initial_funds': False,
                                  # 这里填True，则运行时按照下面所设置的initial_usd进行到等值套保状态，如有多余的币会转到现货账户，币不足的话则会购买
                                  # 如果initial_funds写True且仓位大于预设会平掉已开的套保以外的多余仓位；如果小于预设，则会平掉所有仓位重新初始化！
                                  # 相当于一次强制RESTART！所以，如果是非初始化状态运行，这里一定要写False。
                                  # 如果监测到合约账户币种保证金为0，将进行强制初始化
-                                 'initial_usd_funds': 20,  # u模式初始投入的资金美元价值initial_usd,至少为20
+                                 'initial_usd_funds': 10,  # u模式初始投入的资金美元价值initial_usd,至少为20
                                  '币模式保证金': 10,  # 每次开仓开多少仓位，单位为美金
                                  },
 
@@ -233,4 +233,4 @@ funding_config = {
     'surplus_spot_deal': 'TO_MAIN',  # 建仓剩余现货处理方式,'SAVE'为保留在子账户现货账户，'TO_MAIN'为划转到母账户现货账户
 }
 
-take_profit_rate = 1.5  # 如果在回到套保状态时，保证金金额达到初始资金的几倍时，将提取多余的保证金（利润）到母账户。
+take_profit_rate = 2  # 如果在回到套保状态时，保证金金额达到初始资金的几倍时，将提取多余的保证金（利润）到母账户。
