@@ -1,4 +1,4 @@
-
+import json5
 import pandas as pd
 import ccxt
 from binance_cfuture.Config import *
@@ -25,7 +25,8 @@ else:
 print('子账户id：', account_name)
 
 # =获取执行的时间间隔
-time_interval = symbol_config_dict[account_name]['time_interval']
+
+time_interval = json5.load(open('Dynamic_Config'))['account_info'][account_name]['time_interval']
 time_interval_re = str(int(kline_interval[:-1]) * 60) + 'm' if kline_interval.endswith('h') else kline_interval
 exec_interval_re = str(int(time_interval[:-1]) * 60) + 'm' if time_interval.endswith('h') else time_interval
 offset_time_re = str(int(offset_time[:-1]) * 60) + 'm' if offset_time.endswith('h') else offset_time
@@ -33,8 +34,9 @@ print('执行时间周期：', time_interval, ',底层K线周期：', kline_inte
 
 # =从config中读取相关配置信息
 exchange = ccxt.binance(BINANCE_CONFIG_dict[account_name])
-symbol_config = symbol_config_dict[account_name]['symbol_config']
 main_ex = ccxt.binance(BINANCE_CONFIG_dict['main'])
+symbol_config = json5.load(open('Dynamic_Config'))['account_info'][account_name]['symbol_config']
+print('symbol_config:\n', pd.DataFrame(symbol_config))
 print('交易信息：', symbol_config)
 
 # =获取交易精度
@@ -49,6 +51,7 @@ def main():
     # max_candle_num = 5  # 每次获取的K线数量
     # symbol_candle_data = get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval_re,
     #                                                                  max_candle_num, if_print=True)
+
     trading_initialization(exchange, funding_config, symbol_config, main_ex)
     # =进入每次的循环
     while True:
@@ -60,6 +63,8 @@ def main():
         # 更新账户信息symbol_info
         symbol_info = binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode)
         print('\nsymbol_info:\n', symbol_info, '\n')
+
+        check_symbol_config_update()
 
         # ==========根据当前时间，获取策略下次执行时间，例如16:15。并sleep至该时间==========
         run_time = sleep_until_run_time(exec_interval_re, if_sleep=False, offset_time=offset_time_re)

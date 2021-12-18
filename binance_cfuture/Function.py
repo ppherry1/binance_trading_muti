@@ -1,3 +1,4 @@
+import json5
 
 from binance_cfuture import Signals
 from binance_cfuture.Config import *
@@ -1077,3 +1078,84 @@ def take_profit(exchange, main_acc_ex, symbol_info, take_rate):
             tmp_dict['future_deal_amt'] = deal_amt
             take_list.append(tmp_dict)
     return take_list
+
+
+# ====================动态调参相关==============================
+# 读取并更新参数
+def check_symbol_config_update(exchange, symbol_config, symbol_info):
+    print('开始检查symbol_config是否更新，目前仅支持修改策略和策略参数！')
+    symbol_config_new = json5.load(open('Dynamic_Config'))['account'][account_name]['symbol_config']  # 读取参数
+    forced_modify = json5.load(open('Dynamic_Config'))['forced_modify']  # 强制修改，即如果被修改的币种已持仓则强制平仓
+    symbol_config_change = False
+    for symbol in set(list(symbol_config_new.keys()) + list(symbol_config.keys())):
+        if symbol not in symbol_config_new.keys():
+            print('监测到%s在新的symbol_config中已删除，暂不支持删除币种，脚本结束！' % symbol)
+            exit()
+        elif symbol not in symbol_config.keys():
+            print('监测到新的symbol_config币种%s，暂不支持新增币种，脚本结束！' % symbol)
+            exit()
+        else:
+            if (symbol_config_new[symbol]["strategy_name"] != symbol_config[symbol]["strategy_name"]) or (symbol_config_new[symbol]["para"] != symbol_config[symbol]["para"]):
+                if symbol_info.at[symbol, '持仓方向_u模式'] == 0:
+                    print('监测到%s的symbol_config有更新，且目前处于空仓状态，更新symbol_config。\n原symbol_config：\n' % symbol,
+                          symbol_config[symbol],
+                          '\n更新后symbol_config：\n', symbol_config_new[symbol])
+                    symbol_config[symbol] = symbol_config_new[symbol]
+                    symbol_config_change = True
+                else:
+                    if forced_modify:
+                        order_info = close_c_future_position(exchange, symbol_info, symbol=symbol)
+                        print('监测到%s在新的symbol_config中已更新，用户设置强制套保，更新symbol_config！平仓订单信息：\n' % symbol)
+                        symbol_config[symbol] = symbol_config_new[symbol]
+                        symbol_config_change = True
+                        print(order_info)
+                    else:
+                        print('监测到%s的symbol_config有更新，但目前处于持仓状态，暂不更新symbol_config。' % symbol)
+
+    if symbol_config_change:
+        # 如果参数有变化，重新初始化并更新symbol_info
+        symbol_info_columns = ['账户币数', '原始币数', '持仓方向_' + mode, '合约张数', '持仓均价', '未实现盈亏', '实际美元价值']
+        symbol_info = pd.DataFrame(index=symbol_config.keys(), columns=symbol_info_columns)
+
+        # 更新账户信息symbol_info
+        symbol_info = binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode)
+        print('参数有更新，更新持仓信息\n', symbol_info)
+        print('最新的symbol_config\n', pd.DataFrame(symbol_config))
+    else:
+        print('symbol_config无更新!')
+    return symbol_config, symbol_info
+
+
+# 平掉指定币种coin本位仓位
+def close_c_future_position(exchange, symbol_info, symbol):
+    symbol_spot = symbol[:symbol.find('USD')].upper()
+    market = exchange.dapiPublicGetExchangeInfo()
+    df_market = pd.DataFrame(market['symbols']).set_index('symbol')
+    coin_precision = int(df_market.loc[symbol, 'pricePrecision'])
+    contract_size = int(df_market.loc[symbol, 'contractSize'])
+    df_balance = pd.DataFrame(exchange.dapiPrivateGetAccount()['assets'])
+    hold_margin_num = float(df_balance.loc[df_balance['asset'] == symbol_spot, 'walletBalance'].values[0]) + float(
+        df_balance.loc[df_balance['asset'] == symbol_spot, 'unrealizedProfit'].values[0])
+    symbol_spot_qr = symbol_spot + funding_config['funding_coin'].upper()
+    spot_sell1_price = float(exchange.publicGetTickerBookTicker(params={'symbol': symbol_spot_qr})['askPrice'])
+    symbol_usd_value = hold_margin_num * spot_sell1_price
+    print('币本位账户现有保证金%f，美元价值%f' % (hold_margin_num, symbol_usd_value))
+    expect_amt = round(symbol_usd_value / contract_size)
+    position_amt = symbol_info.at[symbol, '合约张数']
+    deal_amt = expect_amt + position_amt
+
+    if deal_amt != 0:
+        print('开始套保仓位！')
+        long_or_short = '开多' if deal_amt < 0 else '开空'
+        future_buy1_price = exchange.dapiPublicGetTickerBookTicker(params={'symbol': symbol})[0]['bidPrice']
+        price = float(future_buy1_price) * 1.02 if deal_amt < 0 else float(future_buy1_price) * 0.98
+        price = round(price, coin_precision)
+        deal_amt = abs(int(deal_amt))
+        future_order_info = binance_future_place_order(exchange=exchange, symbol=symbol,
+                                                       long_or_short=long_or_short, price=price,
+                                                       amount=deal_amt)
+        print('合约%s成交%f张，方向%s，信息如下：' % (symbol, deal_amt, long_or_short))
+        print(future_order_info)
+    else:
+        print('特殊持仓，请联系little squirrel!')
+
