@@ -6,11 +6,11 @@
 import ccxt
 from time import sleep
 import os
+
+import json5
 import pandas as pd
 from datetime import datetime
 import glob
-import binance_cfuture.Config as cfuture
-import binance_infnet.Config as infnet
 pd.set_option('display.max_rows', 1000)
 pd.set_option('expand_frame_repr', False)  # 当列太多时不换行
 # 设置命令行输出时的列对齐功能
@@ -56,6 +56,10 @@ offset_time = '-5m'  # 必须与deal_type的主程序offset_time一致
 min_time_interval = time_interval_list[0]
 max_time_interval = time_interval_list[-1]
 
+deal_dict = dict()
+for stype in deal_type:
+    deal_dict[stype] = './/binance_%s//Dynamic_Config' % stype
+
 print('需要抓取的时间周期：', time_interval_list)
 print('最小的时间周期是：', min_time_interval)  # 其他时间周期必须是最小时间周期的整数倍。
 min_time_interval_re = min_time_interval.replace('m', 'T') if 'm' in min_time_interval else str(int(min_time_interval[:-1]) * 60) + 'T'
@@ -89,13 +93,15 @@ exchange = ccxt.binance(BINANCE_CONFIG)
 # =需要抓取的币种
 market_symbols = pd.DataFrame(exchange.publicGetExchangeInfo()['symbols'])['symbol'].to_list()
 symbol_config = {}
-for strategy_type in deal_type:
-    for account_name in eval(strategy_type).symbol_config_dict.keys():
-        for symbol in eval(strategy_type).symbol_config_dict[account_name]['symbol_config']:
+for deal_path in deal_dict.keys():
+    account_info = json5.load(open(deal_dict[deal_path]))['account_info']
+    account_name_list = account_info.keys()
+    for account_name in account_name_list:
+        for symbol in account_info[account_name]['symbol_config']:
             symbol_config[symbol] = {
-                'instrument_id': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_id'],
+                'instrument_id': account_info[account_name]['symbol_config'][symbol]['instrument_id'],
                 # 'save_id': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_id'],
-                'instrument_type': eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol]['instrument_type'] if 'instrument_type' in eval(strategy_type).symbol_config_dict[account_name]['symbol_config'][symbol].keys() else 'ufuture'
+                'instrument_type': account_info[account_name]['symbol_config'][symbol]['instrument_type'] if 'instrument_type' in account_info[account_name]['symbol_config'][symbol].keys() else 'ufuture'
             }
             if symbol_config[symbol]['instrument_type'] == 'spot':
                 if symbol_config[symbol]['instrument_id'] not in market_symbols:

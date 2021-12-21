@@ -1,83 +1,81 @@
 {
-    "json格式化校验网址": "https://www.bejson.com/",
-    "forced_modify": false,
+    "json_check": "https://www.bejson.com/",
+    "forced_modify": true,
     "account_info":
     {
-        "son1": {
+    "son10": {
             "symbol_config":
                 {
-                 "BNBUSD_PERP": {"leverage": 1.5,
-                                 "strategy_name": "real_signal_none",
-                                 "para": [100, 1.7],
-                                 "initial_funds": true,
-                                 "initial_usd_funds": 20,
-                                 "币模式保证金": 10
-                                 }
-                },
-            "time_interval": "15m"
-        },
-    "son2": {
-            "symbol_config":
-                {
+
+                    "ETHUSD_PERP": {"instrument_id": "ETHUSD_PERP",
+                                     "instrument_type": "spot",
+                                     "leverage": 2,
+                                     "strategy_name": "signal_bolling_we",
+                                     "para": [188, 1.48],
+                                     "initial_funds": true,
+                                     "initial_usd_funds": 40
+                                     },
                     "BNBUSD_PERP": {"instrument_id": "BNBUSD_PERP",
                                      "instrument_type": "spot",
-                                     "leverage": 1,
-                                     "strategy_name": "real_signal_simple_bolling_we",
-                                     "para": [200, 2],
-                                     "initial_funds": false,
-                                     "initial_usd_funds": 20,
-                                     "币模式保证金": 10
-                                     },
-                    "UNIUSD_PERP": {"instrument_id": "UNIUSD_PERP",
-                                    "instrument_type": "spot",
-                                    "leverage": 1,
-                                    "strategy_name": "real_signal_simple_bolling_we",
-                                    "para": [200, 2],
-                                    "initial_funds": false
-                                    }
+                                     "leverage": 2,
+                                     "strategy_name": "signal_bolling_we",
+                                     "para": [178, 1.2],
+                                     "initial_funds": true,
+                                     "initial_usd_funds": 40
+                                     }
+
                 },
-            "time_interval": "1h"
+
+            "time_interval": "1H"
         },
-    "son3": {
+        "son15": {
             "symbol_config":
                 {
                     "MANAUSD_PERP": {"instrument_id": "MANAUSD_PERP",
                                      "instrument_type": "spot",
-                                     "leverage": 1,
-                                     "strategy_name": "real_signal_none",
-                                     "para": [20],
-                                     "initial_funds": false,
-                                     "initial_usd_funds": 20,
-                                     "币模式保证金": 10
+                                     "leverage": 2,
+                                     "strategy_name": "signal_bolling_ww",
+                                     "para": [188, 0.78],
+                                     "initial_funds": true,
+                                     "initial_usd_funds": 40
                                      },
-                    "BNBUSD_PERP": {"instrument_id": "BNBUSD_PERP",
+                    "LINKUSD_PERP": {"instrument_id": "LINKUSD_PERP",
                                      "instrument_type": "spot",
-                                     "leverage": 1,
-                                     "strategy_name": "real_signal_para",
-                                     "para": [1],
-                                     "initial_funds": false,
-                                     "initial_usd_funds": 20,
-                                     "币模式保证金": 10
+                                     "leverage": 2,
+                                     "strategy_name": "signal_bolling_ww",
+                                     "para": [305, 1.78],
+                                     "initial_funds": true,
+                                     "initial_usd_funds": 40
+                                     },
+                    "AVAXUSD_PERP": {"instrument_id": "AVAXUSD_PERP",
+                                     "instrument_type": "spot",
+                                     "leverage": 2,
+                                     "strategy_name": "signal_bolling_we",
+                                     "para": [178, 1.78],
+                                     "initial_funds": true,
+                                     "initial_usd_funds": 40
+                                     },
+                    "LUNAUSD_PERP": {"instrument_id": "LUNAUSD_PERP",
+                                     "instrument_type": "spot",
+                                     "leverage": 2,
+                                     "strategy_name": "signal_bolling_ww",
+                                     "para": [222, 0.48],
+                                     "initial_funds": true,
+                                     "initial_usd_funds": 40
+                                     },
+                    "EGLDUSD_PERP": {"instrument_id": "EGLDUSD_PERP",
+                                     "instrument_type": "spot",
+                                     "leverage": 2,
+                                     "strategy_name": "signal_bolling_we",
+                                     "para": [142,1.68],
+                                     "initial_funds": true,
+                                     "initial_usd_funds": 40
                                      }
 
                 },
 
-            "time_interval": "15m"
-        },
-        "son12": {
-            "symbol_config":
-                {
-                    "BNBUSD_PERP": {"instrument_id": "BNBUSD_PERP",
-                                     "instrument_type": "spot",
-                                     "leverage": 1,
-                                     "strategy_name": "real_signal_none",
-                                     "para": [20],
-                                     "initial_funds": false
-                                     }
-
-                },
-
-            "time_interval": "15m"
+            "time_interval": "2H"
         }
     }
+
 }

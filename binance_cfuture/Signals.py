@@ -109,7 +109,140 @@ def real_signal_simple_bolling(df, now_pos, avg_price, para=[200, 2]):
 
     return signal
 
-def real_signal_simple_bolling_we(df, now_pos, avg_price, para=[200, 2]):
+@record_signal
+def signal_bolling_ww(df, now_pos, avg_price, para=[200, 2]):
+    """
+    平均差布林+均线回归W+PC平仓+AR过滤
+    """
+    # ===策略参数
+    n = int(para[0])
+    m = para[1]
+    # 固定参数
+    a = 13
+    # ===计算指标
+    # 计算均线
+    df['median'] = ta.LINEARREG(df['close'], timeperiod=a)
+    df['median'] = ta.WMA(df['median'], timeperiod=n)
+    # 平仓均线
+    df['pc'] = ta.TEMA(df['close'], timeperiod=a)
+    # ar过滤
+    df['arh'] = ta.WMA(df['high'], timeperiod=a) - ta.WMA(df['open'], timeperiod=a)
+    df['arl'] = ta.WMA(df['open'], timeperiod=a) - ta.WMA(df['low'], timeperiod=a)
+    df['ar'] = df['arh'] / df['arl']
+    df['guolv_duo'] = df['ar'] > 0.5
+    df['guolv_kong'] = df['ar'] < 0.3
+    df['cha'] = abs(df['close'] - df['median'])
+    # 计算平均差
+    df['ping_jun_cha'] = df['cha'].rolling(n, min_periods=1).mean()
+    # 计算上轨、下轨道
+    df['upper'] = df['median'] + m * df['ping_jun_cha']
+    df['lower'] = df['median'] - m * df['ping_jun_cha']
+    # ===计算信号
+    # 找出做多信号
+    condition1 = df['close'] > df['upper']  # 当前K线的收盘价 > 上轨
+    condition2 = df['close'].shift(1) <= df['upper'].shift(1)  # 之前K线的收盘价 <= 上轨
+    condition3 = df['pc'] > df['median']
+    df.loc[condition1 & condition2 & condition3 & df['guolv_duo'], 'signal_long'] = 1  # 将产生做多信号的那根K线的signal设置为1，1代表做多
+
+    # 找出做多平仓信号
+    condition1 = df['pc'] < df['median']  # 当前K线的收盘价 < 中轨
+    condition2 = df['pc'].shift(1) >= df['median'].shift(1)  # 之前K线的收盘价 >= 中轨
+    df.loc[condition1 & condition2, 'signal_long'] = 0  # 将产生平仓信号当天的signal设置为0，0代表平仓
+
+    # 找出做空信号
+    condition1 = df['close'] < df['lower']  # 当前K线的收盘价 < 下轨
+    condition2 = df['close'].shift(1) >= df['lower'].shift(1)  # 之前K线的收盘价 >= 下轨
+    condition3 = df['pc'] < df['median']
+    df.loc[
+        condition1 & condition2 & condition3 & df['guolv_kong'], 'signal_short'] = -1  # 将产生做空信号的那根K线的signal设置为-1，-1代表做空
+
+    # 找出做空平仓信号
+    condition1 = df['pc'] > df['median']  # 当前K线的收盘价 > 中轨
+    condition2 = df['pc'].shift(1) <= df['median'].shift(1)  # 之前K线的收盘价 <= 中轨
+    df.loc[condition1 & condition2, 'signal_short'] = 0  # 将产生平仓信号当天的signal设置为0，0代表平仓
+
+    # 合并做多做空信号，去除重复信号
+    df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1,
+                                                           skipna=True)  # 若你的pandas版本是最新的，请使用本行代码代替上面一行
+    temp = df[df['signal'].notnull()][['signal']]
+    temp = temp[temp['signal'] != temp['signal'].shift(1)]
+    df['signal'] = temp['signal']
+
+    # ===删除无关变量
+    # df.drop(['median', 'std', 'upper', 'lower', 'signal_long', 'signal_short'], axis=1, inplace=True)
+    df.drop(['signal_long', 'signal_short'], axis=1, inplace=True)
+
+    return df.iloc[-1]['signal']
+
+
+@record_signal
+def signal_bolling_ee(df, now_pos, avg_price, para=[200, 2]):
+    """
+    平均差布林+均线回归W+PC平仓+AR过滤
+    """
+    # ===策略参数
+    n = int(para[0])
+    m = para[1]
+    # 固定参数
+    a = 13
+    # ===计算指标
+    # 计算均线
+    df['median'] = ta.LINEARREG(df['close'], timeperiod=a)
+    df['median'] = ta.EMA(df['median'], timeperiod=n)
+    # 平仓均线
+    df['pc'] = ta.TEMA(df['close'], timeperiod=13)
+    # ar过滤
+    df['arh'] = ta.EMA(df['high'], timeperiod=a) - ta.EMA(df['open'], timeperiod=a)
+    df['arl'] = ta.EMA(df['open'], timeperiod=a) - ta.EMA(df['low'], timeperiod=a)
+    df['ar'] = df['arh'] / df['arl']
+    df['guolv_duo'] = df['ar'] > 0.5
+    df['guolv_kong'] = df['ar'] < 0.3
+    df['cha'] = abs(df['close'] - df['median'])
+    # 计算平均差
+    df['ping_jun_cha'] = df['cha'].rolling(n, min_periods=1).mean()
+    # 计算上轨、下轨道
+    df['upper'] = df['median'] + m * df['ping_jun_cha']
+    df['lower'] = df['median'] - m * df['ping_jun_cha']
+    # ===计算信号
+    # 找出做多信号
+    condition1 = df['close'] > df['upper']  # 当前K线的收盘价 > 上轨
+    condition2 = df['close'].shift(1) <= df['upper'].shift(1)  # 之前K线的收盘价 <= 上轨
+    condition3 = df['pc'] > df['median']
+    df.loc[condition1 & condition2 & condition3 & df['guolv_duo'], 'signal_long'] = 1  # 将产生做多信号的那根K线的signal设置为1，1代表做多
+
+    # 找出做多平仓信号
+    condition1 = df['pc'] < df['median']  # 当前K线的收盘价 < 中轨
+    condition2 = df['pc'].shift(1) >= df['median'].shift(1)  # 之前K线的收盘价 >= 中轨
+    df.loc[condition1 & condition2, 'signal_long'] = 0  # 将产生平仓信号当天的signal设置为0，0代表平仓
+
+    # 找出做空信号
+    condition1 = df['close'] < df['lower']  # 当前K线的收盘价 < 下轨
+    condition2 = df['close'].shift(1) >= df['lower'].shift(1)  # 之前K线的收盘价 >= 下轨
+    condition3 = df['pc'] < df['median']
+    df.loc[
+        condition1 & condition2 & condition3 & df['guolv_kong'], 'signal_short'] = -1  # 将产生做空信号的那根K线的signal设置为-1，-1代表做空
+
+    # 找出做空平仓信号
+    condition1 = df['pc'] > df['median']  # 当前K线的收盘价 > 中轨
+    condition2 = df['pc'].shift(1) <= df['median'].shift(1)  # 之前K线的收盘价 <= 中轨
+    df.loc[condition1 & condition2, 'signal_short'] = 0  # 将产生平仓信号当天的signal设置为0，0代表平仓
+
+    # 合并做多做空信号，去除重复信号
+    df['signal'] = df[['signal_long', 'signal_short']].sum(axis=1, min_count=1,
+                                                           skipna=True)  # 若你的pandas版本是最新的，请使用本行代码代替上面一行
+    temp = df[df['signal'].notnull()][['signal']]
+    temp = temp[temp['signal'] != temp['signal'].shift(1)]
+    df['signal'] = temp['signal']
+
+    # ===删除无关变量
+    # df.drop(['median', 'std', 'upper', 'lower', 'signal_long', 'signal_short'], axis=1, inplace=True)
+    df.drop(['signal_long', 'signal_short'], axis=1, inplace=True)
+
+    return df.iloc[-1]['signal']
+
+
+@record_signal
+def signal_bolling_we(df, now_pos, avg_price, para=[200, 2]):
     """
     real_signal_simple_bolling_we
     平均差布林+均线回归W+PC平仓+AR过滤
@@ -131,7 +264,7 @@ def real_signal_simple_bolling_we(df, now_pos, avg_price, para=[200, 2]):
     df['arl'] = ta.EMA(df['open'], timeperiod=a) - ta.EMA(df['low'], timeperiod=a)
     df['ar'] = df['arh'] / df['arl']
     df['guolv_duo'] = df['ar'] > 0.5
-    df['guolv_kong'] = df['ar'] < 0.5
+    df['guolv_kong'] = df['ar'] < 0.3
     df['cha'] = abs(df['close'] - df['median'])
     # 计算平均差
     df['ping_jun_cha'] = df['cha'].rolling(n, min_periods=1).mean()

@@ -52,7 +52,7 @@ def main():
     # symbol_candle_data = get_binance_coin_future_history_candle_data(exchange, symbol_config, time_interval_re,
     #                                                                  max_candle_num, if_print=True)
 
-    trading_initialization(exchange, funding_config, symbol_config, main_ex)
+    trading_initialization(exchange, account_name, funding_config, symbol_config, main_ex)
     # =进入每次的循环
     while True:
         # ==========获取持仓数据==========
@@ -64,7 +64,7 @@ def main():
         symbol_info = binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode)
         print('\nsymbol_info:\n', symbol_info, '\n')
 
-        check_symbol_config_update()
+        check_symbol_config_update(exchange, account_name, symbol_config, symbol_info)
 
         # ==========根据当前时间，获取策略下次执行时间，例如16:15。并sleep至该时间==========
         run_time = sleep_until_run_time(exec_interval_re, if_sleep=False, offset_time=offset_time_re)
@@ -79,8 +79,9 @@ def main():
                 if os.path.exists(p):
                     print('数据已经存在：', datetime.now())
                     break
-                if datetime.now() > run_time + timedelta(minutes=1):
-                    print('时间超过1分钟，放弃从文件读取数据，返回空数据')
+                if datetime.now() > run_time + timedelta(minutes=2):
+                    print('时间超过2分钟，获取K线超时，无法计算信号，请及时检查获取K线脚本！')
+                    send_dingding_and_raise_error('币本位择时框架获取K线超时，无法计算信号，请及时检查获取K线脚本！')
                     break
             symbol_candle_data[symbol] = pd.read_csv(os.path.join(data_save_dir, '%s_%s.csv' % (symbol, time_interval)))
             symbol_info.loc[symbol, '当前价格'] = symbol_candle_data[symbol].iloc[-1]['close']  # 该品种的最新价格
@@ -123,7 +124,7 @@ def main():
 
         # 利润提取
         if take_profit_rate > 0:
-            take_info = pd.DataFrame(take_profit(exchange, main_ex, symbol_info, take_profit_rate))
+            take_info = pd.DataFrame(take_profit(exchange, account_name, symbol_config, main_ex, symbol_info, take_profit_rate))
             if not take_info.empty:
                 dingding_take_profit_report(take_info)
 

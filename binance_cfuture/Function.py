@@ -369,7 +369,7 @@ def binance_update_cfuture_account(exchange, symbol_config, symbol_info, mode):
     t = pd.DataFrame(symbol_config).T
     symbol_info['合约面值'] = t['face_value']
     symbol_info['leverage'] = t['leverage']
-    symbol_info['币模式保证金'] = t['币模式保证金']
+    # symbol_info['币模式保证金'] = t['币模式保证金']
 
     # 根据持仓信息、账户信息中的值填充symbol_info
     symbol_info['未实现盈亏'] = positions_df['unrealizedProfit']  # 使用标记价格计算
@@ -627,7 +627,7 @@ def cal_all_order_info(symbol_signal, symbol_info, symbol_config, exchange, mode
 
 
 # 建立初始状态,合约账户未开仓,合约账户币种余额为0
-def trading_initialization(exchange, funding_config, symbol_config, main_acc_ex):
+def trading_initialization(exchange, account_name, funding_config, symbol_config, main_acc_ex):
     for symbol in symbol_config.keys():
         symbol_spot = symbol[:symbol.find('USD')].upper()
         market = exchange.dapiPublicGetExchangeInfo()
@@ -669,7 +669,7 @@ def trading_initialization(exchange, funding_config, symbol_config, main_acc_ex)
             else:
                 if ((expect_margin_num - hold_margin_num) * spot_sell1_price > contract_size * 0.9) or symbol_usd_value - 5.000001 <= 0:
                     buy_absence_spot_to_margin(exchange, main_acc_ex, expect_margin_num - hold_margin_num, symbol_spot, symbol_spot_qr,
-                                               symbol_spot_tr)
+                                               symbol_spot_tr, account_name)
                 else:
                     print('现有%s保证金与期望保证金相差的美元价值小于合约面值%f，不必补充保证金！' % (symbol_spot, (contract_size)))
 
@@ -693,14 +693,14 @@ def trading_initialization(exchange, funding_config, symbol_config, main_acc_ex)
     return True
 
 
-def buy_absence_spot_to_margin(exchange, main_acc_ex, absence_num, symbol_spot, symbol_spot_qr, symbol_spot_tr):
+def buy_absence_spot_to_margin(exchange, main_acc_ex, absence_num, symbol_spot, symbol_spot_qr, symbol_spot_tr, account_name):
 
     print('尝试从现货账户提取保证金......')
     df_spot = pd.DataFrame(exchange.privateGetAccount()['balances'])
     spot_num = float(df_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
     still_absence_num = 0
     df_main_spot = pd.DataFrame(main_acc_ex.privateGetAccount()['balances'])
-    main_spot_num = float(df_main_spot.loc[df_spot['asset'] == symbol_spot, 'free'].values[0])
+    main_spot_num = float(df_main_spot.loc[df_main_spot['asset'] == symbol_spot, 'free'].values[0])
     if spot_num >= absence_num:
         print('现货账户有%s数量：%f，尚需求保证金数量%f，数量足够，故从现货提取保证金' % (symbol_spot, spot_num, absence_num))
     else:
@@ -730,12 +730,13 @@ def buy_absence_spot_to_margin(exchange, main_acc_ex, absence_num, symbol_spot, 
             print('子账户计价币%s不足，缺口:%f' % (funding_config['funding_coin'], absence_amount))
             if funding_config['funding_coin_from_main_acc'] is True:
                 print('尝试从母账户转入计价币%s...数量%f' % (funding_config['funding_coin'], absence_amount))
-                main_funding_amount = float(df_main_spot.loc[df_spot['asset'] == funding_config['funding_coin'], 'free'].values[0])
+                main_funding_amount = float(df_main_spot.loc[df_main_spot['asset'] == funding_config['funding_coin'], 'free'].values[0])
                 if main_funding_amount >= absence_amount:
                     info = binance_main_sub_transfer(main_acc_ex, funding_config['funding_coin'], absence_amount,
                                                      to_email=api_dict[account_name]['email'])
                     print('计价币%s转入成功...数量%f,transfer_id:' % (funding_config['funding_coin'], absence_amount))
                     print(info)
+                    time.sleep(5)
                 else:
                     print('母账户计价币不足，脚本退出')
                     exit()
@@ -944,8 +945,7 @@ def cal_timestamp_sign(secret):
 
 
 # 发送钉钉消息
-def send_dingding_msg(content, robot_id='0994377c176bf8be7eac6404f081fd69279b8a5407a1d5764168024e10a00217',
-                      secret='SEC3e297e1c2d94e7a050152fef0097a1b4d2a1e9890a2e3feec0a11433346511c0'):
+def send_dingding_msg(content, robot_id=robot_id_secret[0], secret=robot_id_secret[1]):
     """
     :param content:
     :param robot_id:  你的access_token，即webhook地址中那段access_token。例如如下地址：https://oapi.dingtalk.com/robot/
@@ -1007,7 +1007,7 @@ def dingding_report_every_loop(symbol_info, symbol_signal, symbol_order, run_tim
         send_dingding_msg(content, robot_id=robot_id_secret[0], secret=robot_id_secret[1])
 
 
-def dingding_take_profit_report(take_info):
+def dingding_take_profit_report(take_info, account_name):
     content = '====子账户%s利润提取通知===' % account_name + '\n'
     symbol_info_str = ['\n\n' + str(x) + '\n' + y.to_string() for x, y in take_info.iterrows()]
     content += '-----提取明细' + ''.join(symbol_info_str) + '\n\n'
@@ -1016,14 +1016,14 @@ def dingding_take_profit_report(take_info):
 # ================其他附加功能函数==================
 
 # 储存信号
-def save_signal_data(save_signals_dict, time_interval, offset, acc_name, root_path):
+def save_signal_data(save_signals_dict, time_interval, offset, account_name, root_path):
     for symbol in save_signals_dict.keys():
         save_signals_dict[symbol]['time_interval'] = time_interval
         save_signals_dict[symbol]['offset_time'] = offset
-        save_signals_dict[symbol]['account_name'] = acc_name
+        save_signals_dict[symbol]['account_name'] = account_name
         save_signals_dict[symbol]['symbol'] = symbol
         signal_file = os.path.join(root_path, 'data', 'save_signals', 'cfuture_cta',
-                                   '%s_%s.csv' % (acc_name, symbol))
+                                   '%s_%s.csv' % (account_name, symbol))
         header = False if os.path.exists(signal_file) else True
         save_mode = 'a' if os.path.exists(signal_file) else 'w'
         pd.DataFrame(save_signals_dict[symbol]).T.to_csv(signal_file, mode=save_mode, index=False, header=header,
@@ -1032,13 +1032,13 @@ def save_signal_data(save_signals_dict, time_interval, offset, acc_name, root_pa
 
 
 # 利润提取(按照阈值take_rate自动提取)
-def take_profit(exchange, main_acc_ex, symbol_info, take_rate):
+def take_profit(exchange, account_name, symbol_config, main_acc_ex, symbol_info, take_rate):
     take_list = []
     for symbol in symbol_info.index:
         position_side = symbol_info.at[symbol, '持仓方向_u模式']
         symbol_spot = symbol[:symbol.find('USD')].upper()
         margin_usd_value = symbol_info.at[symbol, '实际美元价值']
-        initial_usd_funds = symbol_config_dict[account_name]['symbol_config'][symbol]['initial_usd_funds']
+        initial_usd_funds = symbol_config[symbol]['initial_usd_funds']
         face_value = symbol_info.at[symbol, '合约面值']
         hold_margin_num = symbol_info.at[symbol, '账户币数']
         spot_sell1_price = margin_usd_value / hold_margin_num
@@ -1082,17 +1082,20 @@ def take_profit(exchange, main_acc_ex, symbol_info, take_rate):
 
 # ====================动态调参相关==============================
 # 读取并更新参数
-def check_symbol_config_update(exchange, symbol_config, symbol_info):
+def check_symbol_config_update(exchange, account_name, symbol_config, symbol_info):
     print('开始检查symbol_config是否更新，目前仅支持修改策略和策略参数！')
-    symbol_config_new = json5.load(open('Dynamic_Config'))['account'][account_name]['symbol_config']  # 读取参数
+    symbol_config_new = json5.load(open('Dynamic_Config'))['account_info'][account_name]['symbol_config']  # 读取参数
+    coin_future_exchange_info(exchange, symbol_config_new)
     forced_modify = json5.load(open('Dynamic_Config'))['forced_modify']  # 强制修改，即如果被修改的币种已持仓则强制平仓
     symbol_config_change = False
     for symbol in set(list(symbol_config_new.keys()) + list(symbol_config.keys())):
         if symbol not in symbol_config_new.keys():
             print('监测到%s在新的symbol_config中已删除，暂不支持删除币种，脚本结束！' % symbol)
+            send_dingding_and_raise_error('监测到%s在新的symbol_config中已删除，暂不支持删除币种，脚本结束！' % symbol)
             exit()
         elif symbol not in symbol_config.keys():
             print('监测到新的symbol_config币种%s，暂不支持新增币种，脚本结束！' % symbol)
+            send_dingding_and_raise_error('监测到新的symbol_config币种%s，暂不支持新增币种，脚本结束！' % symbol)
             exit()
         else:
             if (symbol_config_new[symbol]["strategy_name"] != symbol_config[symbol]["strategy_name"]) or (symbol_config_new[symbol]["para"] != symbol_config[symbol]["para"]):
@@ -1100,13 +1103,15 @@ def check_symbol_config_update(exchange, symbol_config, symbol_info):
                     print('监测到%s的symbol_config有更新，且目前处于空仓状态，更新symbol_config。\n原symbol_config：\n' % symbol,
                           symbol_config[symbol],
                           '\n更新后symbol_config：\n', symbol_config_new[symbol])
-                    symbol_config[symbol] = symbol_config_new[symbol]
+                    symbol_config[symbol]["strategy_name"] = symbol_config_new[symbol]["strategy_name"]
+                    symbol_config[symbol]["para"] = symbol_config_new[symbol]["para"]
                     symbol_config_change = True
                 else:
                     if forced_modify:
                         order_info = close_c_future_position(exchange, symbol_info, symbol=symbol)
                         print('监测到%s在新的symbol_config中已更新，用户设置强制套保，更新symbol_config！平仓订单信息：\n' % symbol)
-                        symbol_config[symbol] = symbol_config_new[symbol]
+                        symbol_config[symbol]["strategy_name"] = symbol_config_new[symbol]["strategy_name"]
+                        symbol_config[symbol]["para"] = symbol_config_new[symbol]["para"]
                         symbol_config_change = True
                         print(order_info)
                     else:
