@@ -2,8 +2,8 @@ from trading_class.account import *
 
 # apikey
 account_info = {
-        'apiKey': "mYpuRg1IsYCBO52k9KMvLHEx7hUQcMpMKrLyrXuILPsVAP7ZKaNkDTWXIaiTuLMU",
-        'secret': "u89HSIXXEx3BbItro2RJFBuXI4ZZ5zmYxM36HGINWuD3ZP4ayy8y7uXFEMSfbOvM",
+        'apiKey': "ezbgmN8MI7IwgySDLjFCzVFJcdthxwZSyjPyRjhAjfr0543DqJrO2UTfwZrK9VHo",
+          'secret': "LJVJdBz37lvwasDsF6DxnmL5T2u4131Uy9ErckIvOXNYlBzOBx7id90wuuezHiuG",
 }
 customer = Account(account_info)
 
@@ -78,11 +78,11 @@ customer = Account(account_info)
 # 合约使用的话，则持仓方式必须为单项持仓模式
 res = customer.post_order({
     'ins_type': 'cfuture',  # 必填参数'spot'现货,'cfuture'币本位,'ufuture'U本位
-    'symbol': 'BNBUSD_PERP',  # 币种或合约名称，必填参数，例如'BTCUSDT','BTCUSD_PERP'
-    'side': 'SELL',  # 下单方向，必填参数，'BUY'为买或做多或平空，'SELL'为卖或做空或平多
+    'symbol': 'ETHUSD_PERP',  # 币种或合约名称，必填参数，例如'BTCUSDT','BTCUSD_PERP'
+    'side': 'BUY',  # 下单方向，必填参数，'BUY'为买或做多或平空，'SELL'为卖或做空或平多
     'order_type': 'MARKET',  # 下单方式，必填参数，'LIMIT'限价单, 'MARKET'市价单
     # 'price': 20000,  # 委托价格，限价单必填，市价单不能填
-    'quantity': 1,  # 购买币数(现货/U本位)或张数(币本位)，合约必填，现货本参数和下面参数'quoteOrderQty'能且仅能填一个
+    'quantity': 8,  # 购买币数(现货/U本位)或张数(币本位)，合约必填，现货本参数和下面参数'quoteOrderQty'能且仅能填一个
     # 例如我要买0.0001个BTC，使用ETHUSDT币对，则这里填0.0001
     # 'quoteOrderQty': 60,  # 购买所使用的计价币币数，合约不能填，现货本参数和上面参数'quantity'能且仅能填一个
     # 例如我要买60美元的BTC，使用ETHUSDT币对，则这里填60

@@ -102,7 +102,7 @@ for acc_name in api_dict.keys():
 kline_interval = '5m'  # 目前支持5m，15m，30m，1h，2h等。得交易所支持的K线才行。最好不要低于5m
 
 # k线偏移的时间
-offset_time = '-20m'  # 目前支持m（分钟），h（小时）为单位。必须是time_interval的整数倍。负数为提前执行，正数为延后执行。
+offset_time = '-5m'  # 目前支持m（分钟），h（小时）为单位。必须是time_interval的整数倍。负数为提前执行，正数为延后执行。
 
 
 # 设置初始资金来源相关参数

@@ -12,7 +12,7 @@
                                      "leverage": 2,
                                      "strategy_name": "signal_bolling_we",
                                      "para": [188, 1.48],
-                                     "initial_funds": true,
+                                     "initial_funds": false,
                                      "initial_usd_funds": 40
                                      },
                     "BNBUSD_PERP": {"instrument_id": "BNBUSD_PERP",
@@ -20,7 +20,7 @@
                                      "leverage": 2,
                                      "strategy_name": "signal_bolling_we",
                                      "para": [178, 1.2],
-                                     "initial_funds": true,
+                                     "initial_funds": false,
                                      "initial_usd_funds": 40
                                      }
 
@@ -36,7 +36,7 @@
                                      "leverage": 2,
                                      "strategy_name": "signal_bolling_ww",
                                      "para": [188, 0.78],
-                                     "initial_funds": true,
+                                     "initial_funds": false,
                                      "initial_usd_funds": 40
                                      },
                     "LINKUSD_PERP": {"instrument_id": "LINKUSD_PERP",
@@ -44,7 +44,7 @@
                                      "leverage": 2,
                                      "strategy_name": "signal_bolling_ww",
                                      "para": [305, 1.78],
-                                     "initial_funds": true,
+                                     "initial_funds": false,
                                      "initial_usd_funds": 40
                                      },
                     "AVAXUSD_PERP": {"instrument_id": "AVAXUSD_PERP",
@@ -60,7 +60,7 @@
                                      "leverage": 2,
                                      "strategy_name": "signal_bolling_ww",
                                      "para": [222, 0.48],
-                                     "initial_funds": true,
+                                     "initial_funds": false,
                                      "initial_usd_funds": 40
                                      },
                     "EGLDUSD_PERP": {"instrument_id": "EGLDUSD_PERP",
@@ -68,7 +68,7 @@
                                      "leverage": 2,
                                      "strategy_name": "signal_bolling_we",
                                      "para": [142,1.68],
-                                     "initial_funds": true,
+                                     "initial_funds": false,
                                      "initial_usd_funds": 40
                                      }
 
